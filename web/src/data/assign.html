@@ -1,0 +1,136 @@
+<h1>3. 担当割り振り</h1>
+  <p class="section-meta">PM側3名（コード監修・設計レビュー含む）・開発側3名　＋ バックアップ体制</p>
+
+  <h2>3.1 メンバー一覧・バックアップ体制</h2>
+  <div class="member-grid">
+    <div class="member-card">
+      <div class="name">佐藤 <span class="badge badge-pm">PM側</span></div>
+      <div class="role">プロジェクトリーダー / 設計統括</div>
+      <div class="backup">⚡ バックアップ担当：<strong>藤本</strong>（PM補佐が全体引継ぎ）</div>
+      <ul class="tasks">
+        <li>全体進捗管理・WBS更新</li>
+        <li>仕様書策定・未確定事項の意思決定</li>
+        <li>回路設計監修・SPIピン構成決定</li>
+        <li>設計書レビュー（基本設計全体）</li>
+        <li>デモシナリオ作成・リハーサル指揮</li>
+      </ul>
+    </div>
+    <div class="member-card">
+      <div class="name">藤本 <span class="badge badge-pm">PM側</span></div>
+      <div class="role">PM補佐 / ファームウェア監修</div>
+      <div class="backup">⚡ バックアップ担当：<strong>佐藤</strong>（PL直接引継ぎ）</div>
+      <ul class="tasks">
+        <li>議事録作成・情報共有</li>
+        <li>仕様書更新・レビュー補助</li>
+        <li>サーバーArduinoコードレビュー</li>
+        <li>結合テスト設計・テスト実施補助</li>
+        <li>音色チューニング監修</li>
+      </ul>
+    </div>
+    <div class="member-card">
+      <div class="name">此上 <span class="badge badge-pm">PM側</span></div>
+      <div class="role">品質管理 / Processing監修</div>
+      <div class="backup">⚡ バックアップ担当：<strong>藤本</strong>（テスト計画引継ぎ）</div>
+      <ul class="tasks">
+        <li>テスト計画立案・品質基準策定</li>
+        <li>Processingアプリコードレビュー</li>
+        <li>楽器Arduinoファームウェアレビュー補助</li>
+        <li>システムテスト設計・実施</li>
+        <li>非機能要件管理（レイテンシ・安定性）</li>
+      </ul>
+    </div>
+    <div class="member-card dev">
+      <div class="name">大菅 <span class="badge badge-dev">開発側</span></div>
+      <div class="role">サーバーArduinoファームウェア担当</div>
+      <div class="backup">⚡ バックアップ担当：<strong>青木</strong>（ハードウェア知識あり）+ <strong>藤本</strong>（コードレビュー）</div>
+      <ul class="tasks">
+        <li>起動シーケンス・SPIマスタ実装（WBS:212）</li>
+        <li>BPM管理・楽曲データPROGMEM実装（WBS:213）</li>
+        <li>USBシリアル通信・マイク入力実装（WBS:214）</li>
+        <li>サーバーArduino組み立て（WBS:211）</li>
+        <li>サーバーArduino単体テスト（WBS:311）</li>
+      </ul>
+    </div>
+    <div class="member-card dev">
+      <div class="name">青木 <span class="badge badge-dev">開発側</span></div>
+      <div class="role">楽器Arduino・回路設計担当</div>
+      <div class="backup">⚡ バックアップ担当：<strong>大菅</strong>（並行ハードウェア経験）+ <strong>佐藤</strong>（回路監修の知識）</div>
+      <ul class="tasks">
+        <li>SPI配線・ピン割り当て設計（WBS:121）</li>
+        <li>マイクモジュール選定・検証（WBS:122）</li>
+        <li>楽器Arduino×4組み立て（WBS:221）</li>
+        <li>圧力センサ処理・音データ生成実装（WBS:222）</li>
+        <li>SPIスレーブ・割り込み送信実装（WBS:223）</li>
+        <li>SPIバス配線（WBS:231）/ 閾値調整（WBS:332）</li>
+      </ul>
+    </div>
+    <div class="member-card dev">
+      <div class="name">新保 <span class="badge badge-dev">開発側</span></div>
+      <div class="role">Processingアプリケーション担当</div>
+      <div class="backup">⚡ バックアップ担当：<strong>此上</strong>（Processingレビュー担当で内容把握）</div>
+      <ul class="tasks">
+        <li>Processing音声処理設計・ライブラリ選定（WBS:132）</li>
+        <li>シリアル通信・パース・音声出力基盤実装（WBS:241）</li>
+        <li>音声合成エンジン実装（WBS:242）</li>
+        <li>エンベロープ・エフェクト実装（WBS:243）</li>
+        <li>Processingアプリ単体テスト（WBS:313）</li>
+        <li>音色チューニング（WBS:333）</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>3.2 WBSベース 担当割り振り表</h2>
+  <div class="warn"><strong>⚡ バックアップ担当：</strong>主担当が体調不良等で作業不能になった場合、バックアップ担当が引き継ぐ。引継ぎを円滑にするため、各タスク担当者はコード・設計書にコメント・ドキュメントを随時更新すること。</div>
+  <table>
+    <thead>
+      <tr><th>ID</th><th>タスク名</th><th>見積</th><th>主担当</th><th>監修（PM）</th><th>バックアップ</th><th>優先度</th><th>依存</th></tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="8" class="wbs-phase">【設計フェーズ】第5週</td></tr>
+      <tr><td colspan="8" class="wbs-cat">110 仕様設計</td></tr>
+      <tr><td>111</td><td>未確定事項の決定</td><td>8h</td><td class="佐藤">佐藤</td><td class="藤本">藤本</td><td>藤本</td><td><span class="badge badge-high">★★★</span></td><td>なし</td></tr>
+      <tr><td>112</td><td>仕様書更新・レビュー</td><td>8h</td><td class="藤本">藤本</td><td class="佐藤">佐藤</td><td>佐藤</td><td><span class="badge badge-high">★★★</span></td><td>111</td></tr>
+      <tr><td colspan="8" class="wbs-cat">120 回路設計</td></tr>
+      <tr><td>121</td><td>SPI配線・ピン割り当て設計</td><td>8h</td><td class="青木">青木</td><td class="佐藤">佐藤</td><td>大菅</td><td><span class="badge badge-high">★★★</span></td><td>111</td></tr>
+      <tr><td>122</td><td>マイクモジュール選定・検証</td><td>16h</td><td class="青木">青木</td><td class="此上">此上</td><td>大菅</td><td><span class="badge badge-med">★★☆</span></td><td>111</td></tr>
+      <tr><td colspan="8" class="wbs-cat">130 ソフトウェア設計</td></tr>
+      <tr><td>131</td><td>ファームウェアアーキテクチャ設計</td><td>8h</td><td class="佐藤">佐藤</td><td class="藤本">藤本</td><td>藤本</td><td><span class="badge badge-high">★★★</span></td><td>111</td></tr>
+      <tr><td>132</td><td>Processing音声処理設計（ライブラリ選定含む）</td><td>16h</td><td class="新保">新保</td><td class="此上">此上</td><td>此上</td><td><span class="badge badge-high">★★★</span></td><td>111</td></tr>
+
+      <tr><td colspan="8" class="wbs-phase">【実装フェーズ】第6〜8週</td></tr>
+      <tr><td colspan="8" class="wbs-cat">210 サーバーArduino実装</td></tr>
+      <tr><td>211</td><td>サーバーArduino組み立て</td><td>8h</td><td class="大菅">大菅</td><td class="佐藤">佐藤</td><td>青木</td><td><span class="badge badge-high">★★★</span></td><td>121・122</td></tr>
+      <tr><td>212</td><td>起動シーケンス・SPI通信実装（エラーハンドリング含む）</td><td>24h</td><td class="大菅">大菅</td><td class="藤本">藤本</td><td>青木</td><td><span class="badge badge-high">★★★</span></td><td>131</td></tr>
+      <tr><td>213</td><td>BPM管理・楽曲データ実装（PROGMEMかえるの歌格納）</td><td>24h</td><td class="大菅">大菅</td><td class="藤本">藤本</td><td>青木</td><td><span class="badge badge-high">★★★</span></td><td>131</td></tr>
+      <tr><td>214</td><td>USBシリアル通信・マイク入力・演奏制御実装</td><td>16h</td><td class="大菅">大菅</td><td class="藤本">藤本</td><td>青木</td><td><span class="badge badge-med">★★☆</span></td><td>131</td></tr>
+      <tr><td colspan="8" class="wbs-cat">220 楽器Arduino実装</td></tr>
+      <tr><td>221</td><td>楽器Arduino×4組み立て</td><td>16h</td><td class="青木">青木</td><td class="佐藤">佐藤</td><td>大菅</td><td><span class="badge badge-high">★★★</span></td><td>121</td></tr>
+      <tr><td>222</td><td>圧力センサ処理・音データ生成実装</td><td>16h</td><td class="青木">青木</td><td class="藤本">藤本</td><td>大菅</td><td><span class="badge badge-high">★★★</span></td><td>131</td></tr>
+      <tr><td>223</td><td>SPIスレーブ・割り込み送信実装</td><td>16h</td><td class="青木">青木</td><td class="藤本">藤本</td><td>大菅</td><td><span class="badge badge-high">★★★</span></td><td>131</td></tr>
+      <tr><td colspan="8" class="wbs-cat">230 通信インターフェース実装</td></tr>
+      <tr><td>231</td><td>SPIバス配線・USBケーブル接続</td><td>8h</td><td class="青木">青木</td><td class="佐藤">佐藤</td><td>大菅</td><td><span class="badge badge-high">★★★</span></td><td>211・221</td></tr>
+      <tr><td colspan="8" class="wbs-cat">240 Processingアプリケーション実装</td></tr>
+      <tr><td>241</td><td>シリアル通信・パース・音声出力基盤実装（バッファ管理）</td><td>24h</td><td class="新保">新保</td><td class="此上">此上</td><td>此上</td><td><span class="badge badge-high">★★★</span></td><td>132</td></tr>
+      <tr><td>242</td><td>音声合成エンジン実装（加算合成・倍音構成テーブル）</td><td>24h</td><td class="新保">新保</td><td class="此上">此上</td><td>此上</td><td><span class="badge badge-high">★★★</span></td><td>132</td></tr>
+      <tr><td>243</td><td>エンベロープ・エフェクト実装（ADSR・ビブラート・リバーブ）</td><td>24h</td><td class="新保">新保</td><td class="此上">此上</td><td>此上</td><td><span class="badge badge-med">★★☆</span></td><td>241・242</td></tr>
+
+      <tr><td colspan="8" class="wbs-phase">【テストフェーズ】第8〜9週</td></tr>
+      <tr><td colspan="8" class="wbs-cat">310 単体テスト</td></tr>
+      <tr><td>311</td><td>サーバーArduino単体テスト</td><td>8h</td><td class="大菅">大菅</td><td class="藤本">藤本</td><td>青木</td><td><span class="badge badge-high">★★★</span></td><td>212・213・214</td></tr>
+      <tr><td>312</td><td>楽器Arduino単体テスト</td><td>8h</td><td class="青木">青木</td><td class="此上">此上</td><td>大菅</td><td><span class="badge badge-high">★★★</span></td><td>222・223</td></tr>
+      <tr><td>313</td><td>Processingアプリ単体テスト</td><td>8h</td><td class="新保">新保</td><td class="此上">此上</td><td>此上</td><td><span class="badge badge-high">★★★</span></td><td>241・242・243</td></tr>
+      <tr><td colspan="8" class="wbs-cat">320 結合テスト</td></tr>
+      <tr><td>321</td><td>SPI通信結合テスト（サーバー↔楽器Arduino）</td><td>16h</td><td class="大菅">大菅・青木</td><td class="藤本">藤本</td><td>此上</td><td><span class="badge badge-high">★★★</span></td><td>231・311・312</td></tr>
+      <tr><td>322</td><td>シリアル通信結合テスト（サーバー↔PC）</td><td>8h</td><td class="大菅">大菅・新保</td><td class="此上">此上</td><td>藤本</td><td><span class="badge badge-high">★★★</span></td><td>231・311・313</td></tr>
+      <tr><td colspan="8" class="wbs-cat">330 システムテスト・調整</td></tr>
+      <tr><td>331</td><td>全体演奏システムテスト（かえるの歌通し確認）</td><td>16h</td><td class="此上">此上</td><td class="佐藤">佐藤・藤本</td><td>藤本</td><td><span class="badge badge-high">★★★</span></td><td>321・322</td></tr>
+      <tr><td>332</td><td>圧力センサ閾値調整（実機調整）</td><td>8h</td><td class="青木">青木</td><td class="此上">此上</td><td>大菅</td><td><span class="badge badge-med">★★☆</span></td><td>321</td></tr>
+      <tr><td>333</td><td>音色チューニング（倍音構成・ADSR・エフェクト調整）</td><td>24h</td><td class="新保">新保</td><td class="藤本">藤本・此上</td><td>此上</td><td><span class="badge badge-med">★★☆</span></td><td>331</td></tr>
+
+      <tr><td colspan="8" class="wbs-phase">【デモ準備・バッファ】第10週</td></tr>
+      <tr><td colspan="8" class="wbs-cat">340 デモ準備</td></tr>
+      <tr><td>341</td><td>デモシナリオ作成</td><td>8h</td><td class="佐藤">佐藤</td><td class="藤本">藤本</td><td>藤本</td><td><span class="badge badge-med">★★☆</span></td><td>331</td></tr>
+      <tr><td>342</td><td>リハーサル・最終調整</td><td>16h</td><td class="全員">全員</td><td class="全員">—</td><td>—</td><td><span class="badge badge-med">★★☆</span></td><td>341・333</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888;">▲ 表6: WBSベース 担当割り振り表（総見積: 376h）</p>

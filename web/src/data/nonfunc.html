@@ -1,0 +1,52 @@
+<h1>5. 非機能要件・標準化ルール</h1>
+  <p class="section-meta">性能・安定性・保守性・開発標準</p>
+
+  <h2>5.1 非機能要件一覧</h2>
+  <table class="req-table">
+    <thead><tr><th>カテゴリ</th><th>要件名</th><th>目標値</th><th>測定方法</th><th>確認CP</th></tr></thead>
+    <tbody>
+      <tr><td>性能</td><td>音声レイテンシ</td><td>受信から発音まで200ms以内（暫定）</td><td>シリアル受信タイムスタンプ vs 実際の発音時刻</td><td>CP5</td></tr>
+      <tr><td>性能</td><td>BPM精度</td><td>拍手BPM検出誤差±5%以内</td><td>メトロノームに合わせた拍手でBPMずれを計測</td><td>CP5</td></tr>
+      <tr><td>性能</td><td>SPI通信サイクル</td><td>1 BPMクロック周期内に全4楽器とのSPIトランザクション完了</td><td>オシロスコープでCS信号・クロックを観測</td><td>CP3</td></tr>
+      <tr><td>性能</td><td>圧力センサ応答</td><td>人形設置から発音開始まで100ms以内</td><td>設置タイムスタンプ vs 音声出力タイムスタンプ</td><td>CP5</td></tr>
+      <tr><td>安定性</td><td>連続稼働</td><td>30分以上クラッシュなし</td><td>リハーサル時の通し演奏で確認</td><td>CP5</td></tr>
+      <tr><td>安定性</td><td>フェイルセーフ</td><td>1楽器障害時も残り3楽器で演奏継続</td><td>意図的にSPI切断して動作確認</td><td>CP5</td></tr>
+      <tr><td>保守性</td><td>コーディング規約</td><td>Arduino: C++11準拠、Processing: PDE標準スタイル</td><td>コードレビュー（CP2,CP4）</td><td>CP4</td></tr>
+      <tr><td>保守性</td><td>コメント・ドキュメント</td><td>全WBSタスクの進捗をコミットコメントで追跡可能であること</td><td>gitログ確認</td><td>毎週</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5.2 実行環境・制約</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>項目</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr><td>Arduinoボード</td><td>Arduino Uno R3（または互換機）× 5台</td></tr>
+        <tr><td>Arduino IDE</td><td>Arduino IDE 2.x（C++11準拠）</td></tr>
+        <tr><td>PC OS</td><td>Windows 10以上 / macOS 12以上</td></tr>
+        <tr><td>Processingバージョン</td><td>Processing 4.x</td></tr>
+        <tr><td>音声ライブラリ</td><td>Minim（試用後確定）</td></tr>
+        <tr><td>通信ボーレート</td><td>115200 bps（USBシリアル）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>5.3 標準化ルール</h2>
+  <div class="card">
+    <h3>命名規約</h3>
+    <table>
+      <thead><tr><th>対象</th><th>規約</th><th>例</th></tr></thead>
+      <tbody>
+        <tr><td>変数・関数（Arduino C++）</td><td>snake_case</td><td><code>current_bpm</code>, <code>send_sound_data()</code></td></tr>
+        <tr><td>構造体・クラス（Arduino C++）</td><td>PascalCase</td><td><code>SoundData</code>, <code>InstrumentState</code></td></tr>
+        <tr><td>定数・マクロ</td><td>UPPER_SNAKE_CASE</td><td><code>MAX_ERROR_COUNT</code>, <code>DEFAULT_BPM</code></td></tr>
+        <tr><td>Processingクラス</td><td>PascalCase</td><td><code>AdditiveSynth</code>, <code>SerialParser</code></td></tr>
+        <tr><td>Processingメソッド</td><td>camelCase</td><td><code>parseBytes()</code>, <code>applyEnvelope()</code></td></tr>
+        <tr><td>ブランチ名（Git）</td><td>feature/[wbs-id]-[機能名]</td><td><code>feature/212-spi-master</code></td></tr>
+        <tr><td>コミットメッセージ</td><td>[WBS:XXX] 変更内容</td><td><code>[WBS:212] SPI初期化まで完了</code></td></tr>
+      </tbody>
+    </table>
+    <div class="note" style="margin-top:12px;">
+      <strong>PR（プルリクエスト）ルール：</strong>mainブランチへの直プッシュ禁止。PRには必ずPM側メンバー1名のレビュー承認が必要。
+    </div>
+  </div>

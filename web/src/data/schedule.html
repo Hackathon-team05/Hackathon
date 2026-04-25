@@ -1,0 +1,252 @@
+<h1>4. スケジュール・ガントチャート・チェックポイント</h1>
+  <p class="section-meta">第5〜10週のスケジュール管理・体調不良対応・確認ゲート</p>
+
+  <h2>4.1 週次フェーズ概要</h2>
+  <div class="phase-bar" style="font-size:12px;">
+    <div class="phase-design">5週<br>設計</div>
+    <div class="phase-impl" style="flex:2;">6〜7週<br>実装（前半）</div>
+    <div class="phase-impl" style="background:#1e8449; flex:2;">8〜9週<br>実装・テスト（後半）</div>
+    <div class="phase-buffer">10週<br>バッファ・デモ</div>
+  </div>
+
+  <h2>4.2 ガントチャート（図10）</h2>
+  <p>図10に第5〜10週のWBSタスクスケジュールを示す。<code>crit</code>（赤）はクリティカルパス、◆はチェックポイント。</p>
+  <div class="mermaid-wrap">
+    <div class="gtt">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:28px;">ID</th>
+            <th style="text-align:left;min-width:200px;">タスク名</th>
+            <th style="width:40px;">担当</th>
+            <th style="width:38px;background:#2980b9;">W5</th>
+            <th style="width:38px;background:#27ae60;">W6</th>
+            <th style="width:38px;background:#1e8449;">W7</th>
+            <th style="width:38px;background:#1a6b3c;">W8</th>
+            <th style="width:38px;background:#e67e22;">W9</th>
+            <th style="width:38px;background:#8e44ad;">W10</th>
+            <th style="width:32px;">種別</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="gs"><td colspan="10">【設計フェーズ】第5週（4/28〜5/2）</td></tr>
+          <tr><td>111</td><td>未確定事項の決定</td><td>佐藤</td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>112</td><td>仕様書更新・レビュー</td><td>藤本</td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td></td><td></td><td style="font-size:10px;color:#3498db;"></td></tr>
+          <tr><td>121</td><td>SPI配線設計</td><td>青木</td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>131</td><td>FWアーキテクチャ設計</td><td>佐藤</td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>122</td><td>マイクモジュール選定・検証</td><td>青木</td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+          <tr><td>132</td><td>Processing音声処理設計</td><td>新保</td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+          <tr class="ms"><td colspan="10">◆ CP1：設計レビュー・仕様書確定（5/2）</td></tr>
+          <tr class="gs"><td colspan="10">【実装フェーズ前半】第6週（5/5〜5/9）</td></tr>
+          <tr><td>211</td><td>サーバーArduino組み立て</td><td>大菅</td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━</td><td></td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>221</td><td>楽器Arduino×4組み立て</td><td>青木</td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>241</td><td>Processingシリアル基盤実装</td><td>新保</td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td><td></td><td></td><td></td><td></td></tr>
+          <tr class="ms"><td colspan="10">◆ CP2：ハードウェア組み立て完了確認（5/9）</td></tr>
+          <tr class="gs"><td colspan="10">【実装フェーズ中盤】第7週（5/12〜5/16）</td></tr>
+          <tr><td>212</td><td>起動シーケンス・SPI通信実装</td><td>大菅</td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>222</td><td>圧力センサ処理実装</td><td>青木</td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>223</td><td>SPIスレーブ実装</td><td>青木</td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>242</td><td>音声合成エンジン実装</td><td>新保</td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td>213</td><td>BPM管理・楽曲データ実装</td><td>大菅</td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr class="ms"><td colspan="10">◆ CP3：SPIプロトタイプ通信動作確認（5/15）</td></tr>
+          <tr class="gs"><td colspan="10">【実装フェーズ後半・単体テスト】第8週（5/19〜5/23）</td></tr>
+          <tr><td>214</td><td>シリアル通信・マイク実装</td><td>大菅</td><td></td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td></tr>
+          <tr><td>231</td><td>SPIバス配線</td><td>青木</td><td></td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━</td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>243</td><td>エンベロープ・エフェクト実装</td><td>新保</td><td></td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td><td></td><td></td></tr>
+          <tr><td>311</td><td>サーバーArduino単体テスト</td><td>大菅</td><td></td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━</td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>312</td><td>楽器Arduino単体テスト</td><td>青木</td><td></td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━</td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>313</td><td>Processingアプリ単体テスト</td><td>新保</td><td></td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━</td><td></td><td></td><td></td></tr>
+          <tr class="ms"><td colspan="10">◆ CP4：単体テスト完了確認（5/23）</td></tr>
+          <tr class="gs"><td colspan="10">【テスト・調整】第9週（5/26〜5/30）</td></tr>
+          <tr><td>321</td><td>SPI結合テスト</td><td>大菅・青木</td><td></td><td></td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>322</td><td>シリアル結合テスト</td><td>大菅・新保</td><td></td><td></td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━</td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>332</td><td>圧力センサ閾値調整</td><td>青木</td><td></td><td></td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━</td><td></td><td></td></tr>
+          <tr><td>333</td><td>音色チューニング</td><td>新保</td><td></td><td></td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td><td></td></tr>
+          <tr><td>331</td><td>全体システムテスト</td><td>此上</td><td></td><td></td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr class="ms"><td colspan="10">◆ CP5：システムテスト完了確認（5/30）</td></tr>
+          <tr class="gs"><td colspan="10">【バッファ・デモ準備】第10週（6/2〜6/6）</td></tr>
+          <tr><td>—</td><td>バッファ（スリップ対応・予備作業）</td><td>全員</td><td></td><td></td><td></td><td></td><td></td><td style="background:#95a5a6;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td></tr>
+          <tr><td>341</td><td>デモシナリオ作成</td><td>佐藤</td><td></td><td></td><td></td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━</td><td></td></tr>
+          <tr><td>342</td><td>リハーサル・最終調整</td><td>全員</td><td></td><td></td><td></td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━</td><td></td></tr>
+          <tr class="ms"><td colspan="10">◆ CP6：デモリハーサル最終確認（6/6）</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="gantt-legend">
+    <div class="gantt-legend-item"><div class="gantt-legend-color" style="background:#e74c3c;"></div>クリティカルパス（crit）</div>
+    <div class="gantt-legend-item"><div class="gantt-legend-color" style="background:#3498db;"></div>通常タスク</div>
+    <div class="gantt-legend-item"><div class="gantt-legend-color" style="background:#95a5a6;"></div>バッファ期間</div>
+    <div class="gantt-legend-item"><span>◆ チェックポイント（CP）</span></div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図10: ガントチャート（第5〜10週）</p>
+
+  <h2>4.3 チェックポイント（確認ゲート）一覧</h2>
+  <p>各チェックポイントはゲート方式：<strong>通過条件を満たさない場合、次フェーズに進まず当週に修正を行う。</strong></p>
+  <div class="cp-timeline">
+
+    <div class="cp-row">
+      <div class="cp-dot">CP1</div>
+      <div class="cp-content">
+        <div class="cp-week">第5週末（2026-05-02）</div>
+        <div class="cp-title">◆ 設計レビュー・仕様書確定ゲート</div>
+        <ul class="cp-items">
+          <li>✅ SoundData構造体の全フィールド（型・単位・バイト数）が確定していること</li>
+          <li>✅ SPIのCSピン割り当てが確定していること（D4〜D7）</li>
+          <li>✅ 楽曲データ管理主体が確定していること（→ サーバーArduino PROGMEM）</li>
+          <li>✅ 圧力センサとの共存方式が確定していること（→ 割り込み方式）</li>
+          <li>✅ Processingの音声ライブラリ候補が決まっていること</li>
+          <li>✅ 仕様書がチーム全員にレビューされ承認されていること</li>
+        </ul>
+        <p style="margin-top:6px; font-size:12px; color:#6d28d9;"><strong>判定者：佐藤（PL）</strong>　未通過の場合：10週バッファで対応</p>
+      </div>
+    </div>
+
+    <div class="cp-row">
+      <div class="cp-dot">CP2</div>
+      <div class="cp-content">
+        <div class="cp-week">第6週末（2026-05-09）</div>
+        <div class="cp-title">◆ ハードウェア組み立て完了確認ゲート</div>
+        <ul class="cp-items">
+          <li>✅ サーバーArduino（ボード・マイク・スイッチ・配線）の組み立てが完了していること</li>
+          <li>✅ 楽器Arduino×4の組み立てが完了していること</li>
+          <li>✅ 各ボードへの電源供給が正常であることを目視確認していること</li>
+          <li>✅ Processingのライブラリ導入・シリアル受信の基本動作が確認されていること</li>
+        </ul>
+        <p style="margin-top:6px; font-size:12px; color:#6d28d9;"><strong>判定者：佐藤（PL）・此上（品質管理）</strong>　未通過の場合：翌週前半（7週月火）で修正</p>
+      </div>
+    </div>
+
+    <div class="cp-row">
+      <div class="cp-dot">CP3</div>
+      <div class="cp-content">
+        <div class="cp-week">第7週水曜（2026-05-15）</div>
+        <div class="cp-title">◆ SPIプロトタイプ通信動作確認ゲート</div>
+        <ul class="cp-items">
+          <li>✅ サーバーArduino → 楽器Arduino1台でのSPIハンドシェイクが成功すること</li>
+          <li>✅ BPMクロック信号が楽器Arduino側で受信できていること（シリアルモニタ確認）</li>
+          <li>✅ 楽器Arduino → サーバーへの音データ割り込み送信が1回以上成功していること</li>
+          <li>✅ チェックサムエラー検出が動作していること</li>
+        </ul>
+        <p style="margin-top:6px; font-size:12px; color:#6d28d9;"><strong>判定者：藤本（監修）</strong>　未通過の場合：7週木金でデバッグ・8週バッファ日を使用</p>
+      </div>
+    </div>
+
+    <div class="cp-row">
+      <div class="cp-dot">CP4</div>
+      <div class="cp-content">
+        <div class="cp-week">第8週末（2026-05-23）</div>
+        <div class="cp-title">◆ 単体テスト完了確認ゲート</div>
+        <ul class="cp-items">
+          <li>✅ サーバーArduino単体：起動シーケンス・SPI通信・BPM管理・シリアル送信が各単体で動作すること</li>
+          <li>✅ 楽器Arduino単体：圧力センサ読み取り・NoteOn/NoteOff判定・SoundData生成・SPI送信が動作すること</li>
+          <li>✅ Processingアプリ単体：シリアル受信・パース・音声合成・エンベロープ・エフェクト・出力が動作すること</li>
+          <li>✅ 各担当PM側メンバーによるコードレビューが完了していること</li>
+        </ul>
+        <p style="margin-top:6px; font-size:12px; color:#6d28d9;"><strong>判定者：此上（品質管理）</strong>　未通過の場合：10週バッファで対応</p>
+      </div>
+    </div>
+
+    <div class="cp-row">
+      <div class="cp-dot">CP5</div>
+      <div class="cp-content">
+        <div class="cp-week">第9週末（2026-05-30）</div>
+        <div class="cp-title">◆ システムテスト完了確認ゲート</div>
+        <ul class="cp-items">
+          <li>✅ かえるの歌が5台全てで最初から最後まで演奏できること（1回以上の通し確認）</li>
+          <li>✅ 拍手BPM変更機能が動作すること（デモ環境で確認）</li>
+          <li>✅ カエル人形による手動演奏機能が4台全てで動作すること</li>
+          <li>✅ 1楽器のSPI切断時にフェイルセーフが発動し、残り3楽器で演奏継続できること</li>
+          <li>✅ 音声レイテンシが許容範囲内（200ms以内）であること</li>
+          <li>✅ 30分以上の連続稼働でクラッシュしないこと</li>
+        </ul>
+        <p style="margin-top:6px; font-size:12px; color:#6d28d9;"><strong>判定者：佐藤（PL）・此上（品質管理）</strong>　未通過の場合：10週バッファで緊急対応</p>
+      </div>
+    </div>
+
+    <div class="cp-row">
+      <div class="cp-dot passed">CP6</div>
+      <div class="cp-content passed">
+        <div class="cp-week">第10週末（2026-06-06）</div>
+        <div class="cp-title">◆ デモリハーサル最終確認ゲート（デモ直前）</div>
+        <ul class="cp-items">
+          <li>✅ デモシナリオ通りに演奏が完遂できること（リハーサル1回以上）</li>
+          <li>✅ 機材セットアップ（輸送・配線）が10分以内で完了できること</li>
+          <li>✅ 観客への説明・操作説明が準備されていること</li>
+          <li>✅ 緊急時（SPI断線など）の対応手順が全員に周知されていること</li>
+        </ul>
+        <p style="margin-top:6px; font-size:12px; color:#1a6b3c;"><strong>判定者：佐藤（PL）</strong>　未通過の場合：デモ当日の予備時間で最終修正</p>
+      </div>
+    </div>
+  </div>
+
+  <h2>4.4 体調不良・作業停止時のリスク対応</h2>
+  <div class="warn">
+    <strong>⚠ 開発側3名はクリティカルパスに張り付いており、1名の離脱がスケジュールに直結する。</strong>以下のルールを必ず徹底すること。
+  </div>
+  <div class="card">
+    <h3>体制ルール</h3>
+    <ol>
+      <li><strong>当日朝8時までに連絡</strong>：体調不良で当日作業不能の場合、佐藤（PL）にSlack/LINEで連絡する。</li>
+      <li><strong>バックアップ担当が即日引継ぎ</strong>：表6の「バックアップ」列に記載された担当者が当日中に引き継ぐ。</li>
+      <li><strong>2日以上連続離脱の場合</strong>：佐藤・藤本が残タスクを再配分し、スケジュールを再調整する（WBS更新）。</li>
+      <li><strong>3日以上の場合</strong>：10週バッファを前倒し投入して対応。ただしCP5（システムテスト完了）の期限は厳守。</li>
+    </ol>
+
+    <h3 style="margin-top:16px;">引継ぎを容易にするための義務事項</h3>
+    <ul>
+      <li>各実装タスクは<strong>「今日どこまで実装したか」を毎日コミットコメントに記載</strong>する（例：<code>[WBS:212] SPI初期化まで完了・ハンドシェイク未着手</code>）</li>
+      <li>コード内に<strong>TODO / FIXME コメント</strong>を残し、未完了部分を明示する</li>
+      <li>週次ミーティング（毎週月曜）で進捗を口頭共有し、バックアップ担当が作業内容を理解した状態を維持する</li>
+      <li>重要な設計判断（閾値・ピン番号など）は<strong>コード内コメントに理由とともに記載</strong>する</li>
+    </ul>
+
+    <h3 style="margin-top:16px;">バックアップ担当リスク評価</h3>
+    <table class="backup-table">
+      <thead><tr><th>離脱シナリオ</th><th>代替担当</th><th>影響度</th><th>対応策</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>大菅が7週（SPI実装中）に離脱</td>
+          <td>青木（バックアップ）</td>
+          <td class="risk-high">高：クリティカルパス直撃</td>
+          <td>青木が223の後にa212を優先引継ぎ。此上がProcessingサポートへ移行。10週バッファを前倒し</td>
+        </tr>
+        <tr>
+          <td>青木が7週（楽器Arduino実装中）に離脱</td>
+          <td>大菅（バックアップ）</td>
+          <td class="risk-high">高：クリティカルパス直撃</td>
+          <td>大菅が213の後にa222/223を優先引継ぎ。SPIバス配線（231）を8週頭に後ろ倒し</td>
+        </tr>
+        <tr>
+          <td>新保が実装中に離脱</td>
+          <td>此上（バックアップ）</td>
+          <td class="risk-med">中：クリティカルでないが音声品質に影響</td>
+          <td>此上がProcessingレビュー知識を活かして241/242を引継ぎ。音色チューニング（333）は10週バッファへ</td>
+        </tr>
+        <tr>
+          <td>佐藤が5週（設計中）に離脱</td>
+          <td>藤本（バックアップ）</td>
+          <td class="risk-med">中：意思決定が遅延</td>
+          <td>藤本がPL代行として未確定事項を決定。開発側3名の作業は並行継続（121/122/132は影響なし）</td>
+        </tr>
+        <tr>
+          <td>此上がシステムテスト中に離脱</td>
+          <td>藤本（バックアップ）</td>
+          <td class="risk-med">中：テスト計画の引継ぎが必要</td>
+          <td>藤本がテスト計画書を元にCP5の判定を実施。品質基準は本設計書の非機能要件で代替</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>4.5 週次ミーティング・定例確認事項</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>タイミング</th><th>内容</th><th>参加者</th><th>所要時間</th></tr></thead>
+      <tbody>
+        <tr><td>毎週月曜</td><td>週次進捗報告：前週完了タスク・今週予定・ブロッカーの共有</td><td>全員</td><td>15〜30分</td></tr>
+        <tr><td>毎週木曜</td><td>週中間チェック：クリティカルパスの進捗確認・バックアップ担当への状況共有</td><td>全員（非同期可）</td><td>10分</td></tr>
+        <tr><td>CP直前</td><td>チェックポイント判定：通過条件の確認・判定者による承認</td><td>判定者 + 主担当</td><td>30分</td></tr>
+      </tbody>
+    </table>
+  </div>

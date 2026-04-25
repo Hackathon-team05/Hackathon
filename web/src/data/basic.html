@@ -1,0 +1,243 @@
+<h1>1. 基本設計（外部設計）</h1>
+  <p class="section-meta">ユーザー視点で「何を実現するか（What）」を定義する</p>
+
+  <h2>1.1 システム構成図（図1）</h2>
+  <div class="mermaid-wrap">
+    <div class="cssd" style="display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;justify-content:center;">
+      <div class="sg" style="border-color:#8e44ad;flex:2;min-width:200px;">
+        <div class="sg-t" style="background:#f3e8ff;color:#8e44ad;">楽器Arduino × 4</div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tr><td style="padding:3px;"><span class="nd red" style="font-size:10.5px;display:block;text-align:center;">圧力センサ+人形</span></td><td style="text-align:center;color:#888;padding:0 4px;">→</td><td style="padding:3px;"><span class="nd pur" style="font-size:10.5px;display:block;text-align:center;">楽器1 メロディ</span></td></tr>
+          <tr><td style="padding:3px;"><span class="nd red" style="font-size:10.5px;display:block;text-align:center;">圧力センサ+人形</span></td><td style="text-align:center;color:#888;padding:0 4px;">→</td><td style="padding:3px;"><span class="nd pur" style="font-size:10.5px;display:block;text-align:center;">楽器2 メロディ</span></td></tr>
+          <tr><td style="padding:3px;"><span class="nd red" style="font-size:10.5px;display:block;text-align:center;">圧力センサ+人形</span></td><td style="text-align:center;color:#888;padding:0 4px;">→</td><td style="padding:3px;"><span class="nd pur" style="font-size:10.5px;display:block;text-align:center;">楽器3 メロディ</span></td></tr>
+          <tr><td style="padding:3px;"><span class="nd red" style="font-size:10.5px;display:block;text-align:center;">圧力センサ+人形</span></td><td style="text-align:center;color:#888;padding:0 4px;">→</td><td style="padding:3px;"><span class="nd pur" style="font-size:10.5px;display:block;text-align:center;">楽器4 リズム</span></td></tr>
+        </table>
+      </div>
+      <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;min-width:90px;font-size:10.5px;color:#555;text-align:center;">
+        <div><span style="color:#27ae60;font-size:14px;">←</span> SPI割り込み<br>音データ返送</div>
+        <div style="color:#aaa;font-size:11px;">⇄</div>
+        <div>SPI: BPMクロック <span style="color:#2980b9;font-size:14px;">→</span></div>
+      </div>
+      <div class="sg" style="border-color:#e67e22;flex:2;min-width:180px;">
+        <div class="sg-t" style="background:#fef9e7;color:#e67e22;">サーバーArduino</div>
+        <div class="nd srv" style="display:block;margin-bottom:6px;text-align:left;padding:6px 10px;line-height:1.6;">
+          <strong>サーバーファームウェア</strong><br>
+          ・BPM管理<br>・楽曲データ（PROGMEM）<br>・SPI制御<br>・シリアル送信
+        </div>
+        <div style="display:flex;gap:6px;">
+          <span class="nd red" style="flex:1;font-size:10.5px;text-align:center;">マイクモジュール<br>（拍手検出）<br><small style="color:#888;">↓</small></span>
+          <span class="nd skp" style="flex:1;font-size:10.5px;text-align:center;">起動スイッチ<br><small style="color:#888;">↓</small></span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:80px;font-size:10.5px;color:#555;text-align:center;">
+        USBシリアル<br>音データ転送<br><span style="color:#27ae60;font-size:16px;">→</span>
+      </div>
+      <div class="sg" style="border-color:#27ae60;flex:1.5;min-width:140px;">
+        <div class="sg-t" style="background:#f0fef4;color:#27ae60;">PC（Processing実行環境）</div>
+        <div class="nd grn" style="display:block;text-align:left;padding:6px 10px;line-height:1.6;">
+          <strong>Processingアプリ</strong><br>
+          ・加算合成<br>・ADSR<br>・エフェクト<br>・音声出力
+        </div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図1: システム構成図</p>
+
+  <h2>1.2 機能一覧（FBS）</h2>
+  <table>
+    <thead><tr><th>機能ID</th><th>中項目</th><th>小項目</th><th>担当ノード</th><th>概要</th><th>備考</th></tr></thead>
+    <tbody>
+      <tr><td>F1.1</td><td>起動・制御</td><td>起動シーケンス</td><td>サーバーArduino</td><td>自己初期化 → SPIハンドシェイク → 演奏開始</td><td>タイムアウト2秒・リトライ3回</td></tr>
+      <tr><td>F1.2</td><td>起動・制御</td><td>BPM管理</td><td>サーバーArduino</td><td>デフォルトBPM設定・拍手テンポ同期（ピーク検出）</td><td>リングバッファノイズ除去</td></tr>
+      <tr><td>F1.3</td><td>起動・制御</td><td>楽曲データ管理</td><td>サーバーArduino</td><td>PROGMEM格納・BPMクロックに合わせた演奏タイミング指示</td><td>かえるの歌</td></tr>
+      <tr><td>F1.4</td><td>起動・制御</td><td>演奏終了・停止処理</td><td>サーバーArduino</td><td>曲末ループ再生・強制停止時クロック停止</td><td><span class="badge badge-done">決定：ループ</span></td></tr>
+      <tr><td>F2.1</td><td>通信</td><td>SPI通信</td><td>SRV ↔ 楽器Arduino</td><td>BPMクロック送信（1:4）・割り込み音データ受信・チェックサム</td><td>3回エラーでフェイルセーフ</td></tr>
+      <tr><td>F2.2</td><td>通信</td><td>USBシリアル通信</td><td>SRV ↔ PC</td><td>音データをProcessingへ転送</td><td>115200 bps</td></tr>
+      <tr><td>F3.1</td><td>センサ入力</td><td>圧力センサ処理</td><td>楽器Arduino</td><td>ポーリング・閾値判定・NoteOn/NoteOff生成・自動演奏との共存</td><td><span class="badge badge-done">決定：割り込み方式</span></td></tr>
+      <tr><td>F3.2</td><td>センサ入力</td><td>マイク入力</td><td>サーバーArduino</td><td>拍手音ピーク検出 → BPM変更トリガ</td><td>移動平均でノイズ除去</td></tr>
+      <tr><td>F4.1</td><td>音声生成</td><td>シリアルパース</td><td>Processing</td><td>バイト列受信・SoundData構造体への変換</td><td>4バイト固定長</td></tr>
+      <tr><td>F4.2</td><td>音声生成</td><td>加算合成</td><td>Processing</td><td>倍音構成テーブル参照・正弦波生成・全倍音加算</td><td>倍音構成はスペクトル解析後確定</td></tr>
+      <tr><td>F4.3</td><td>音声生成</td><td>エンベロープ処理</td><td>Processing</td><td>Attack/Decay/Sustain/Releaseをサンプル単位で適用</td><td></td></tr>
+      <tr><td>F4.4</td><td>音声生成</td><td>エフェクト処理</td><td>Processing</td><td>ビブラート → リバーブの順に適用</td><td></td></tr>
+      <tr><td>F4.5</td><td>音声生成</td><td>音声出力</td><td>Processing</td><td>バッファ書き込み・レイテンシ制御・停止時バッファ完了処理</td><td>ライブラリ候補：Minim</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888;">▲ 表1: 機能一覧（FBS）</p>
+
+  <h2>1.3 起動フロー・演奏ライフサイクル（図2）</h2>
+  <div class="mermaid-wrap">
+    <div class="cssd fccol" style="gap:0;">
+      <span class="nd se" style="padding:8px 20px;">電源ON・スイッチ投入</span>
+      <div class="fcvl"></div>
+      <span class="nd srv" style="display:block;text-align:center;max-width:340px;">サーバーArduino自己初期化<br><small>PROGMEM展開・BPM設定・SPI初期化</small></span>
+      <div class="fcvl"></div>
+      <span class="nd" style="display:block;text-align:center;max-width:320px;">楽器Arduino×4 CSを順次送信<br><small>ハンドシェイク確認</small></span>
+      <div class="fcvl"></div>
+      <span class="nd" style="display:block;text-align:center;padding:14px 20px;border-color:#e67e22;background:#fef9e7;font-weight:bold;">応答あり?</span>
+      <div class="fcvl"></div>
+      <div class="fcrow" style="gap:24px;margin:4px 0;">
+        <div class="fcbr">
+          <span class="dlbl g">応答あり</span>
+          <div class="fcvl"></div>
+          <span class="nd grn">アクティブ登録</span>
+        </div>
+        <div class="fcbr">
+          <span class="dlbl r">タイムアウト2s・3回失敗</span>
+          <div class="fcvl"></div>
+          <span class="nd skp">スキップ登録（無音パート）</span>
+        </div>
+      </div>
+      <div class="fcvl"></div>
+      <span class="nd" style="display:block;text-align:center;">全4台確認完了</span>
+      <div class="fcvl"></div>
+      <span class="nd" style="display:block;text-align:center;">BPMクロック一斉送信開始</span>
+      <div class="fcvl"></div>
+      <span class="nd srv" style="display:block;text-align:center;font-weight:bold;padding:10px 24px;">かえるの歌 自動演奏ループ</span>
+      <div class="fcvl"></div>
+      <span class="nd" style="display:block;text-align:center;padding:14px 20px;border-color:#e67e22;background:#fef9e7;font-weight:bold;">イベント?</span>
+      <div class="fcvl"></div>
+      <div class="fcrow" style="gap:6px;margin:4px 0;align-items:flex-start;">
+        <div class="fcbr" style="min-width:90px;">
+          <span class="dlbl">拍手検出</span><div class="fcvl"></div>
+          <span class="nd" style="font-size:11px;text-align:center;">BPMリアルタイム<br>更新</span>
+          <div class="fcvl"></div><span class="dlbl g">↺ ループへ</span>
+        </div>
+        <div class="fcbr" style="min-width:110px;">
+          <span class="dlbl s">人形設置</span><div class="fcvl"></div>
+          <span class="nd man" style="font-size:11px;text-align:center;">割り込み方式<br>対象パートミュート<br>手動演奏に切替</span>
+          <div class="fcvl"></div><span class="dlbl g">↺ ループへ</span>
+        </div>
+        <div class="fcbr" style="min-width:90px;">
+          <span class="dlbl g">人形除去</span><div class="fcvl"></div>
+          <span class="nd grn" style="font-size:11px;text-align:center;">自動演奏復帰</span>
+          <div class="fcvl"></div><span class="dlbl g">↺ ループへ</span>
+        </div>
+        <div class="fcbr" style="min-width:80px;">
+          <span class="dlbl">曲末</span><div class="fcvl"></div>
+          <span class="nd" style="font-size:11px;text-align:center;">先頭に戻り<br>ループ</span>
+          <div class="fcvl"></div><span class="dlbl g">↺ ループへ</span>
+        </div>
+        <div class="fcbr" style="min-width:110px;">
+          <span class="dlbl r">スイッチOFF</span><div class="fcvl"></div>
+          <span class="nd fsp" style="font-size:11px;text-align:center;">BPMクロック・SPI停止<br>バッファ完了処理</span>
+          <div class="fcvl"></div>
+          <span class="nd se" style="font-size:11px;padding:5px 12px;">終了</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図2: 起動・演奏ライフサイクル フロー図</p>
+
+  <h2>1.4 データモデル（ER図・論理設計）（図3）</h2>
+  <div class="mermaid-wrap">
+    <!-- エンティティ一覧 -->
+    <div class="er-grid">
+
+      <div class="er-entity">
+        <div class="er-head">SongData</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>notes</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>bpm_default</div>
+      </div>
+
+      <div class="er-entity">
+        <div class="er-head">SoundData</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>instrument_id</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>pitch</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>duration</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>velocity</div>
+      </div>
+
+      <div class="er-entity">
+        <div class="er-head">HarmonicTable</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>instrument_id</div>
+        <div class="er-attr"><span class="er-atype">float</span>harmonics</div>
+      </div>
+
+      <div class="er-entity er-purple">
+        <div class="er-head">BpmState</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>current_bpm</div>
+        <div class="er-attr"><span class="er-atype">int</span>ring_buffer</div>
+        <div class="er-attr"><span class="er-atype">float</span>avg</div>
+        <div class="er-attr"><span class="er-atype">float</span>stddev</div>
+      </div>
+
+      <div class="er-entity er-purple">
+        <div class="er-head">InstrumentState</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>id</div>
+        <div class="er-attr"><span class="er-atype">bool</span>active</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>error_count</div>
+        <div class="er-attr"><span class="er-atype">bool</span>is_manual</div>
+      </div>
+
+      <div class="er-entity er-purple">
+        <div class="er-head">EnvelopeState</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>phase</div>
+        <div class="er-attr"><span class="er-atype">int</span>sample_pos</div>
+        <div class="er-attr"><span class="er-atype">float</span>adsr_params</div>
+      </div>
+
+    </div>
+
+    <!-- 関連（リレーション） -->
+    <table class="er-rel-table">
+      <thead>
+        <tr><th>エンティティA</th><th style="text-align:center;">多重度</th><th>エンティティB</th><th>ラベル</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="er-ent">SongData</td>        <td style="text-align:center;letter-spacing:1px;">1 ──▶ n</td><td class="er-ent">SoundData</td>     <td class="er-card">generates</td></tr>
+        <tr><td class="er-ent">InstrumentState</td> <td style="text-align:center;letter-spacing:1px;">1 ──▶ 1</td><td class="er-ent">SoundData</td>     <td class="er-card">owns</td></tr>
+        <tr><td class="er-ent">SoundData</td>        <td style="text-align:center;letter-spacing:1px;">1 ──▶ 1</td><td class="er-ent">HarmonicTable</td> <td class="er-card">references</td></tr>
+        <tr><td class="er-ent">SoundData</td>        <td style="text-align:center;letter-spacing:1px;">1 ──▶ 1</td><td class="er-ent">EnvelopeState</td> <td class="er-card">triggers</td></tr>
+        <tr><td class="er-ent">BpmState</td>         <td style="text-align:center;letter-spacing:1px;">1 ──▶ n</td><td class="er-ent">SongData</td>      <td class="er-card">controls timing</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図3: エンティティ関連図（論理設計）</p>
+
+  <h2>1.5 外部インターフェース仕様</h2>
+  <div class="card">
+    <h3>① SPI通信（サーバー ↔ 楽器Arduino）</h3>
+    <table>
+      <thead><tr><th>項目</th><th>仕様</th></tr></thead>
+      <tbody>
+        <tr><td>CSピン割り当て</td><td>楽器1:D4 / 楽器2:D5 / 楽器3:D6 / 楽器4:D7</td></tr>
+        <tr><td>データ構造</td><td>SoundData 4バイト固定長</td></tr>
+        <tr><td>BPM方向</td><td>サーバー → 楽器：BPMクロック信号（1バイト）</td></tr>
+        <tr><td>音データ方向</td><td>楽器 → サーバー：割り込み駆動 SoundData 送信</td></tr>
+        <tr><td>エラー処理</td><td>チェックサム方式・連続3回エラーでフェイルセーフ（以降無音）</td></tr>
+        <tr><td>ハンドシェイク</td><td>起動時タイムアウト2秒・リトライ3回</td></tr>
+      </tbody>
+    </table>
+    <h3 style="margin-top:18px;">② USBシリアル通信（サーバーArduino ↔ PC）</h3>
+    <table>
+      <thead><tr><th>項目</th><th>仕様</th></tr></thead>
+      <tbody>
+        <tr><td>ボーレート</td><td>115200 bps</td></tr>
+        <tr><td>データ形式</td><td>SoundData 4バイト固定長をそのまま転送</td></tr>
+        <tr><td>Processingハンドシェイク</td><td><span class="badge badge-done">決定：なし（自動受信開始）</span></td></tr>
+      </tbody>
+    </table>
+    <h3 style="margin-top:18px;">③ 圧力センサ入力</h3>
+    <table>
+      <thead><tr><th>項目</th><th>仕様</th></tr></thead>
+      <tbody>
+        <tr><td>ポーリング間隔</td><td>10ms（暫定）</td></tr>
+        <tr><td>NoteOn判定</td><td>アナログ値が閾値を上回った瞬間</td></tr>
+        <tr><td>NoteOff通知</td><td><span class="badge badge-done">決定：duration=0 のSoundDataを送信</span></td></tr>
+        <tr><td>共存方式</td><td><span class="badge badge-done">決定：割り込み方式（該当パートの自動演奏をミュートし手動演奏に切替）</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>1.6 操作インターフェース一覧</h2>
+  <table>
+    <thead><tr><th>操作名</th><th>操作手段</th><th>応答動作</th><th>担当ノード</th></tr></thead>
+    <tbody>
+      <tr><td>電源投入</td><td>スイッチON</td><td>起動シーケンス → かえるの歌演奏</td><td>サーバーArduino</td></tr>
+      <tr><td>手動演奏</td><td>カエル人形を圧力センサに置く</td><td>該当パート自動演奏ミュート → 手動発音</td><td>楽器Arduino</td></tr>
+      <tr><td>手動演奏停止</td><td>カエル人形を外す</td><td>自動演奏復帰</td><td>楽器Arduino</td></tr>
+      <tr><td>テンポ変更</td><td>拍手（マイクで検出）</td><td>BPMリアルタイム更新</td><td>サーバーArduino</td></tr>
+      <tr><td>強制停止</td><td>スイッチOFF</td><td>BPMクロック停止 → 全体停止</td><td>サーバーArduino</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888;">▲ 表2: 操作インターフェース一覧</p>
