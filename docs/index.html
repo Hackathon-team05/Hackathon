@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Arduinoオーケストラ 設計書</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Arial, 'Hiragino Sans', sans-serif; background: #f0f2f5; color: #333; }
+
+  nav {
+    background: #1a252f; position: sticky; top: 0; z-index: 100;
+    display: flex; gap: 4px; padding: 8px 20px; flex-wrap: wrap;
+  }
+  nav a { color: #bdc3c7; text-decoration: none; padding: 7px 14px; border-radius: 4px; font-size: 13px; transition: background 0.2s; }
+  nav a:hover, nav a.active { background: #2980b9; color: #fff; }
+  nav .nav-title { color: #ecf0f1; font-weight: bold; font-size: 14px; padding: 7px 14px; margin-right: 8px; border-right: 1px solid #34495e; }
+
+  section { display: none; padding: 32px 48px; max-width: 1400px; margin: 0 auto; }
+  section.active { display: block; }
+
+  h1 { font-size: 26px; font-weight: bold; margin-bottom: 6px; color: #1a252f; border-left: 6px solid #2980b9; padding-left: 14px; }
+  .section-meta { color: #888; font-size: 12px; margin-bottom: 24px; padding-left: 20px; }
+  h2 { font-size: 18px; font-weight: bold; margin: 32px 0 12px; color: #1a252f; border-bottom: 2px solid #2980b9; padding-bottom: 6px; }
+  h3 { font-size: 15px; font-weight: bold; margin: 20px 0 8px; color: #2c3e50; }
+  p, li { font-size: 14px; line-height: 1.85; margin-bottom: 4px; }
+  ul, ol { padding-left: 22px; margin-bottom: 10px; }
+
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13px; }
+  th { background: #2c3e50; color: #ecf0f1; padding: 9px 12px; text-align: left; font-weight: 600; }
+  td { padding: 8px 12px; border-bottom: 1px solid #dde; }
+  tr:nth-child(even) td { background: #f8f9fb; }
+  tr:hover td { background: #e8f4fd; }
+
+  pre { background: #1e2d3d; color: #cdd3de; padding: 18px; border-radius: 6px; font-size: 12.5px; line-height: 1.65; overflow-x: auto; margin: 12px 0; }
+  code { background: #e8ecf0; padding: 2px 6px; border-radius: 3px; font-size: 12.5px; font-family: 'Courier New', monospace; }
+
+  blockquote { border-left: 4px solid #e67e22; background: #fef9f0; padding: 10px 16px; margin: 12px 0; border-radius: 0 4px 4px 0; font-size: 13px; }
+  .note   { border-left: 4px solid #27ae60; background: #f0fef4; padding: 10px 16px; margin: 12px 0; border-radius: 0 4px 4px 0; font-size: 13px; }
+  .todo   { border-left: 4px solid #e74c3c; background: #fef0f0; padding: 10px 16px; margin: 12px 0; border-radius: 0 4px 4px 0; font-size: 13px; }
+  .warn   { border-left: 4px solid #f39c12; background: #fffbf0; padding: 10px 16px; margin: 12px 0; border-radius: 0 4px 4px 0; font-size: 13px; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin: 1px 2px; }
+  .badge-pm   { background: #d5e8f7; color: #1a6096; }
+  .badge-dev  { background: #d5f5e3; color: #1a6b3c; }
+  .badge-high { background: #fde8e8; color: #922b21; }
+  .badge-med  { background: #fef9e7; color: #7d6608; }
+  .badge-low  { background: #e8e8e8; color: #555; }
+  .badge-done { background: #e8f8f5; color: #1d7a5f; }
+  .badge-cp   { background: #f3e8ff; color: #6d28d9; font-size: 12px; padding: 3px 10px; }
+
+  .member-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 16px 0; }
+  .member-card { background: #fff; border-radius: 8px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-top: 4px solid #2980b9; }
+  .member-card.dev { border-top-color: #27ae60; }
+  .member-card .name { font-size: 16px; font-weight: bold; margin-bottom: 4px; }
+  .member-card .role { font-size: 12px; color: #666; margin-bottom: 10px; }
+  .member-card .backup { font-size: 12px; background: #fff8e1; border: 1px solid #f0c040; border-radius: 4px; padding: 5px 8px; margin-bottom: 10px; }
+  .member-card .tasks { font-size: 13px; }
+  .member-card .tasks li { margin-bottom: 3px; }
+
+  .mermaid-wrap { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin: 16px 0; overflow-x: auto; }
+  .card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin: 16px 0; }
+
+  .wbs-phase { background: #2c3e50 !important; color: #ecf0f1 !important; font-weight: bold; }
+  .wbs-cat   { background: #3d556b !important; color: #d0dae3 !important; font-weight: 600; }
+
+  /* 担当者カラー */
+  td.佐藤 { background: #dbeafe; color: #1e40af; font-weight: 600; }
+  td.藤本 { background: #ede9fe; color: #5b21b6; font-weight: 600; }
+  td.此上 { background: #fce7f3; color: #9d174d; font-weight: 600; }
+  td.大菅 { background: #d1fae5; color: #065f46; font-weight: 600; }
+  td.青木 { background: #ecfccb; color: #365314; font-weight: 600; }
+  td.新保 { background: #fef3c7; color: #78350f; font-weight: 600; }
+  td.全員 { background: #f0f0f0; color: #333; font-weight: 600; text-align: center; }
+
+  .top-banner { background: linear-gradient(135deg, #1a252f 0%, #2c3e50 60%, #2980b9 100%); color: #fff; padding: 40px 48px; margin-bottom: 0; }
+  .top-banner h1 { color: #fff; border-left-color: #5dade2; font-size: 28px; }
+  .top-banner p  { color: #aec6d8; margin-top: 8px; font-size: 14px; }
+
+  .phase-bar { display: flex; gap: 0; margin: 16px 0; border-radius: 6px; overflow: hidden; font-size: 13px; }
+  .phase-bar div { flex: 1; padding: 10px; text-align: center; font-weight: 600; }
+  .phase-design { background: #2980b9; color: #fff; }
+  .phase-impl   { background: #27ae60; color: #fff; }
+  .phase-test   { background: #e67e22; color: #fff; }
+  .phase-buffer { background: #8e44ad; color: #fff; }
+
+  .status-row { display: flex; gap: 16px; flex-wrap: wrap; margin: 16px 0; }
+  .status-box { background: #fff; border-radius: 8px; padding: 14px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); flex: 1; min-width: 130px; text-align: center; }
+  .status-box .val { font-size: 26px; font-weight: bold; color: #2980b9; }
+  .status-box .lbl { font-size: 12px; color: #888; margin-top: 2px; }
+
+  .index-list { list-style: none; padding: 0; }
+  .index-list li { padding: 6px 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+  .index-list li a { color: #2980b9; text-decoration: none; }
+  .index-list li a:hover { text-decoration: underline; }
+  .index-list .idx-num { color: #999; font-size: 12px; width: 40px; display: inline-block; }
+
+  .req-table th { background: #1a6096; }
+
+  /* チェックポイントタイムライン */
+  .cp-timeline { position: relative; margin: 20px 0; }
+  .cp-row { display: flex; align-items: flex-start; margin-bottom: 24px; gap: 16px; }
+  .cp-dot { width: 40px; height: 40px; border-radius: 50%; background: #6d28d9; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; flex-shrink: 0; }
+  .cp-dot.passed { background: #27ae60; }
+  .cp-content { background: #fff; border-radius: 8px; padding: 14px 18px; box-shadow: 0 2px 6px rgba(0,0,0,0.07); flex: 1; border-left: 4px solid #6d28d9; }
+  .cp-content.passed { border-left-color: #27ae60; }
+  .cp-week { font-size: 11px; color: #888; margin-bottom: 2px; }
+  .cp-title { font-size: 14px; font-weight: bold; color: #1a252f; margin-bottom: 6px; }
+  .cp-items { font-size: 13px; color: #555; }
+  .cp-items li { margin-bottom: 2px; }
+
+  /* バックアップ表 */
+  .backup-table th { background: #7c3aed; }
+  .backup-table td.risk-high { background: #fde8e8; color: #922b21; font-weight: 600; }
+  .backup-table td.risk-med  { background: #fef9e7; color: #7d6608; font-weight: 600; }
+
+  /* ガントCSS自作（MermaidのGanttの代替としてのビジュアルガイド） */
+  .gantt-legend { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
+  .gantt-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+  .gantt-legend-color { width: 20px; height: 12px; border-radius: 3px; }
+
+  /* ===== CSS版ダイアグラム（Mermaid代替） ===== */
+  .cssd{font-size:12px}
+  .sg{border:2px solid #95a5a6;border-radius:6px;padding:8px 12px}
+  .sg-t{text-align:center;font-size:11px;font-weight:bold;padding:2px 8px;border-radius:3px;margin-bottom:8px}
+  .nd{border:1.5px solid #2980b9;background:#e8f4fd;border-radius:4px;padding:5px 10px;text-align:center;display:inline-block;line-height:1.4;font-size:11.5px}
+  .nd.srv{border-color:#e67e22;background:#fef9e7}
+  .nd.grn{border-color:#27ae60;background:#f0fef4}
+  .nd.pur{border-color:#8e44ad;background:#f3e8ff}
+  .nd.red{border-color:#e74c3c;background:#fde8e8}
+  .nd.drk{border-color:#2c3e50;background:#2c3e50;color:#fff;font-weight:bold}
+  .nd.se{border-color:#1a252f;background:#1a252f;color:#fff;border-radius:20px}
+  .nd.fsp{border-color:#e74c3c;background:#fde8e8}
+  .nd.skp{border-color:#95a5a6;background:#ecf0f1}
+  .nd.man{border-color:#e67e22;background:#fef9e7}
+  .dlbl{font-size:10px;background:#e8f4fd;color:#1a6096;border-radius:2px;padding:1px 5px;white-space:nowrap}
+  .dlbl.s{background:#fef9e7;color:#7d4e00}
+  .dlbl.r{background:#fde8e8;color:#922b21}
+  .dlbl.g{background:#f0fef4;color:#1a6b3c}
+  .fccol{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .fcvl{width:2px;height:14px;background:#888}
+  .fcrow{display:flex;gap:10px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+  .fcbr{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .sq{width:100%;border-collapse:collapse;font-size:11px}
+  .sq .sqh th{background:#2c3e50;color:#ecf0f1;padding:7px 8px;text-align:center;border-right:1px solid #34495e}
+  .sq .sqh th:last-child{border-right:none}
+  .sq td{padding:4px 6px;border-bottom:1px solid #eef;vertical-align:middle}
+  .sq .lp td{background:#f8f0ff;color:#8e44ad;font-style:italic;font-size:10.5px}
+  .sq .at td{background:#fff8e8;color:#e67e22;font-style:italic;font-size:10.5px}
+  .sq .ae td{background:#fff8e8;color:#888;font-style:italic;font-size:10.5px}
+  .sqsl{background:#fef9e7;border:1px solid #fad7a0;border-radius:3px;padding:2px 5px;display:inline-block;font-size:10.5px;white-space:pre-line}
+  .clg{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:10px;margin-bottom:12px}
+  .clb{border:1.5px solid #2980b9;border-radius:4px;overflow:hidden}
+  .clbh{background:#2980b9;color:#fff;padding:6px 10px;font-weight:bold;text-align:center}
+  .clbs{border-bottom:1px solid #c8ddf0;padding:3px 8px;background:#f8fbff}
+  .clbs:last-child{border-bottom:none}
+  .clba{font-family:'Courier New',monospace;font-size:10.5px;padding:1.5px 0}
+  .clba .vi{color:#e74c3c}
+  .sttbl{width:100%;border-collapse:collapse;font-size:12px}
+  .sttbl th{background:#546e7a;color:#fff;padding:6px 10px}
+  .sttbl td{padding:6px 10px;border-bottom:1px solid #eef}
+  .sttag{display:inline-block;padding:3px 12px;border-radius:14px;font-weight:600;font-size:11.5px;border:2px solid}
+  .sttag.a{background:#e8f4fd;border-color:#2980b9;color:#1a6096}
+  .sttag.m{background:#fef9e7;border-color:#e67e22;color:#7d4e00}
+  .sttag.k{background:#ecf0f1;border-color:#95a5a6;color:#555}
+  .sttag.f{background:#fde8e8;border-color:#e74c3c;color:#922b21}
+  .sttag.i{background:#1a252f;color:#fff;border-color:#1a252f}
+  .gtt{overflow-x:auto}
+  .gtt table{border-collapse:collapse;font-size:11px;width:100%;min-width:700px}
+  .gtt th{background:#2c3e50;color:#ecf0f1;padding:5px 8px;border-right:1px solid #34495e;text-align:center;white-space:nowrap}
+  .gtt td{padding:3px 6px;border-bottom:1px solid #eef;vertical-align:middle}
+  .gtt .gs td{background:#3d556b;color:#ecf0f1;font-weight:bold}
+  .gtt .ms td{background:#f8f0ff;color:#8e44ad;font-weight:bold;text-align:center}
+  .gtt .bo{position:relative;height:14px;background:#ecf0f1;border-radius:3px;min-width:280px}
+  .gtt .bi{position:absolute;height:100%;border-radius:3px;top:0}
+  .gtt .bi.c{background:#e74c3c}
+  .gtt .bi.n{background:#3498db}
+  .gtt .bi.d{background:#95a5a6}
+  @media (max-width: 768px) {
+    section { padding: 20px 16px; }
+    nav { padding: 6px 10px; }
+    .top-banner { padding: 24px 16px; }
+    .cp-row { flex-direction: column; }
+  }
+
+  /* ER図 HTML版 */
+  .er-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+  .er-entity { border: 1.5px solid #2980b9; border-radius: 4px; overflow: hidden; font-size: 12px; }
+  .er-entity.er-purple { border-color: #8e44ad; }
+  .er-head { padding: 7px 10px; font-weight: bold; text-align: center; color: #fff; background: #2980b9; font-size: 12.5px; }
+  .er-entity.er-purple .er-head { background: #8e44ad; }
+  .er-attr { display: flex; align-items: center; padding: 4px 8px; border-bottom: 1px solid #eef; }
+  .er-attr:last-child { border-bottom: none; }
+  .er-atype { color: #888; font-size: 10px; width: 40px; flex-shrink: 0; font-family: 'Courier New', monospace; }
+  .er-ent  { color: #1a6096; font-weight: 600; }
+  .er-card { color: #888; font-style: italic; }
+  .er-rel-table { margin-top: 4px; }
+  .er-rel-table th { background: #546e7a; }
+  .er-rel-table td { text-align: left; }
+  @media (max-width: 600px) { .er-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-title">🎵 Arduinoオーケストラ 設計書</span>
+  <a href="#" onclick="show('cover')"   id="nav-cover">概要</a>
+  <a href="#" onclick="show('basic')"   id="nav-basic">基本設計</a>
+  <a href="#" onclick="show('detail')"  id="nav-detail">詳細設計</a>
+  <a href="#" onclick="show('assign')"  id="nav-assign">担当割り振り</a>
+  <a href="#" onclick="show('schedule')" id="nav-schedule">スケジュール</a>
+  <a href="#" onclick="show('nonfunc')" id="nav-nonfunc">非機能要件</a>
+  <a href="#" onclick="show('issues')"  id="nav-issues">未確定事項</a>
+</nav>
+
+<!-- ===== 概要 ===== -->
+<section id="cover" class="active">
+  <div class="top-banner">
+    <h1>Arduinoオーケストラ 設計書</h1>
+    <p>基本設計（外部設計）・詳細設計（内部設計）・担当割り振り・ガントチャート</p>
+    <p style="margin-top:4px; font-size:12px; color:#7fb3d3;">作成日: 2026-04-23　改訂: v1.1</p>
+  </div>
+  <div style="padding: 24px 0 0;">
+    <div class="status-row">
+      <div class="status-box"><div class="val">5</div><div class="lbl">Arduino台数</div></div>
+      <div class="status-box"><div class="val">4</div><div class="lbl">楽器パート</div></div>
+      <div class="status-box"><div class="val">6</div><div class="lbl">チームメンバー</div></div>
+      <div class="status-box"><div class="val">376h</div><div class="lbl">総見積工数</div></div>
+      <div class="status-box"><div class="val">6週間</div><div class="lbl">第5〜10週</div></div>
+      <div class="status-box"><div class="val">6</div><div class="lbl">チェックポイント</div></div>
+    </div>
+
+    <h2>プロジェクト概要</h2>
+    <div class="card">
+      <h3>目的</h3>
+      <p>Arduino複数台を用いて「かえるの歌」を演奏するオーケストラシステムを構築する。観客の拍手テンポによってBPMをリアルタイム変更し、カエル人形を圧力センサに置くことで手動演奏も可能にする体験型音楽装置。</p>
+      <h3 style="margin-top:16px;">フェーズ構成</h3>
+      <div class="phase-bar">
+        <div class="phase-design">📐 5週：設計（64h）</div>
+        <div class="phase-impl">⚙ 6〜9週：実装・テスト（288h）</div>
+        <div class="phase-buffer">🛡 10週：バッファ・デモ（24h+）</div>
+      </div>
+    </div>
+
+    <h2>目次</h2>
+    <div class="card">
+      <ul class="index-list">
+        <li><span class="idx-num">1.</span><a href="#" onclick="show('basic')">基本設計（外部設計）</a></li>
+        <li><span class="idx-num">2.</span><a href="#" onclick="show('detail')">詳細設計（内部設計）</a></li>
+        <li><span class="idx-num">3.</span><a href="#" onclick="show('assign')">担当割り振り</a></li>
+        <li><span class="idx-num">4.</span><a href="#" onclick="show('schedule')">スケジュール・ガントチャート・チェックポイント</a></li>
+        <li><span class="idx-num">5.</span><a href="#" onclick="show('nonfunc')">非機能要件・標準化ルール</a></li>
+        <li><span class="idx-num">6.</span><a href="#" onclick="show('issues')">未確定事項・課題管理</a></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 基本設計 ===== -->
+<section id="basic">
+  <h1>1. 基本設計（外部設計）</h1>
+  <p class="section-meta">ユーザー視点で「何を実現するか（What）」を定義する</p>
+
+  <h2>1.1 システム構成図（図1）</h2>
+  <div class="mermaid-wrap">
+    <div class="cssd" style="display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;justify-content:center;">
+      <div class="sg" style="border-color:#8e44ad;flex:2;min-width:200px;">
+        <div class="sg-t" style="background:#f3e8ff;color:#8e44ad;">楽器Arduino × 4</div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tr><td style="padding:3px;"><span class="nd red" style="font-size:10.5px;display:block;text-align:center;">圧力センサ+人形</span></td><td style="text-align:center;color:#888;padding:0 4px;">→</td><td style="padding:3px;"><span class="nd pur" style="font-size:10.5px;display:block;text-align:center;">楽器1 メロディ</span></td></tr>
+          <tr><td style="padding:3px;"><span class="nd red" style="font-size:10.5px;display:block;text-align:center;">圧力センサ+人形</span></td><td style="text-align:center;color:#888;padding:0 4px;">→</td><td style="padding:3px;"><span class="nd pur" style="font-size:10.5px;display:block;text-align:center;">楽器2 メロディ</span></td></tr>
+          <tr><td style="padding:3px;"><span class="nd red" style="font-size:10.5px;display:block;text-align:center;">圧力センサ+人形</span></td><td style="text-align:center;color:#888;padding:0 4px;">→</td><td style="padding:3px;"><span class="nd pur" style="font-size:10.5px;display:block;text-align:center;">楽器3 メロディ</span></td></tr>
+          <tr><td style="padding:3px;"><span class="nd red" style="font-size:10.5px;display:block;text-align:center;">圧力センサ+人形</span></td><td style="text-align:center;color:#888;padding:0 4px;">→</td><td style="padding:3px;"><span class="nd pur" style="font-size:10.5px;display:block;text-align:center;">楽器4 リズム</span></td></tr>
+        </table>
+      </div>
+      <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;min-width:90px;font-size:10.5px;color:#555;text-align:center;">
+        <div><span style="color:#27ae60;font-size:14px;">←</span> SPI割り込み<br>音データ返送</div>
+        <div style="color:#aaa;font-size:11px;">⇄</div>
+        <div>SPI: BPMクロック <span style="color:#2980b9;font-size:14px;">→</span></div>
+      </div>
+      <div class="sg" style="border-color:#e67e22;flex:2;min-width:180px;">
+        <div class="sg-t" style="background:#fef9e7;color:#e67e22;">サーバーArduino</div>
+        <div class="nd srv" style="display:block;margin-bottom:6px;text-align:left;padding:6px 10px;line-height:1.6;">
+          <strong>サーバーファームウェア</strong><br>
+          ・BPM管理<br>・楽曲データ（PROGMEM）<br>・SPI制御<br>・シリアル送信
+        </div>
+        <div style="display:flex;gap:6px;">
+          <span class="nd red" style="flex:1;font-size:10.5px;text-align:center;">マイクモジュール<br>（拍手検出）<br><small style="color:#888;">↓</small></span>
+          <span class="nd skp" style="flex:1;font-size:10.5px;text-align:center;">起動スイッチ<br><small style="color:#888;">↓</small></span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:80px;font-size:10.5px;color:#555;text-align:center;">
+        USBシリアル<br>音データ転送<br><span style="color:#27ae60;font-size:16px;">→</span>
+      </div>
+      <div class="sg" style="border-color:#27ae60;flex:1.5;min-width:140px;">
+        <div class="sg-t" style="background:#f0fef4;color:#27ae60;">PC（Processing実行環境）</div>
+        <div class="nd grn" style="display:block;text-align:left;padding:6px 10px;line-height:1.6;">
+          <strong>Processingアプリ</strong><br>
+          ・加算合成<br>・ADSR<br>・エフェクト<br>・音声出力
+        </div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図1: システム構成図</p>
+
+  <h2>1.2 機能一覧（FBS）</h2>
+  <table>
+    <thead><tr><th>機能ID</th><th>中項目</th><th>小項目</th><th>担当ノード</th><th>概要</th><th>備考</th></tr></thead>
+    <tbody>
+      <tr><td>F1.1</td><td>起動・制御</td><td>起動シーケンス</td><td>サーバーArduino</td><td>自己初期化 → SPIハンドシェイク → 演奏開始</td><td>タイムアウト2秒・リトライ3回</td></tr>
+      <tr><td>F1.2</td><td>起動・制御</td><td>BPM管理</td><td>サーバーArduino</td><td>デフォルトBPM設定・拍手テンポ同期（ピーク検出）</td><td>リングバッファノイズ除去</td></tr>
+      <tr><td>F1.3</td><td>起動・制御</td><td>楽曲データ管理</td><td>サーバーArduino</td><td>PROGMEM格納・BPMクロックに合わせた演奏タイミング指示</td><td>かえるの歌</td></tr>
+      <tr><td>F1.4</td><td>起動・制御</td><td>演奏終了・停止処理</td><td>サーバーArduino</td><td>曲末ループ再生・強制停止時クロック停止</td><td><span class="badge badge-done">決定：ループ</span></td></tr>
+      <tr><td>F2.1</td><td>通信</td><td>SPI通信</td><td>SRV ↔ 楽器Arduino</td><td>BPMクロック送信（1:4）・割り込み音データ受信・チェックサム</td><td>3回エラーでフェイルセーフ</td></tr>
+      <tr><td>F2.2</td><td>通信</td><td>USBシリアル通信</td><td>SRV ↔ PC</td><td>音データをProcessingへ転送</td><td>115200 bps</td></tr>
+      <tr><td>F3.1</td><td>センサ入力</td><td>圧力センサ処理</td><td>楽器Arduino</td><td>ポーリング・閾値判定・NoteOn/NoteOff生成・自動演奏との共存</td><td><span class="badge badge-done">決定：割り込み方式</span></td></tr>
+      <tr><td>F3.2</td><td>センサ入力</td><td>マイク入力</td><td>サーバーArduino</td><td>拍手音ピーク検出 → BPM変更トリガ</td><td>移動平均でノイズ除去</td></tr>
+      <tr><td>F4.1</td><td>音声生成</td><td>シリアルパース</td><td>Processing</td><td>バイト列受信・SoundData構造体への変換</td><td>4バイト固定長</td></tr>
+      <tr><td>F4.2</td><td>音声生成</td><td>加算合成</td><td>Processing</td><td>倍音構成テーブル参照・正弦波生成・全倍音加算</td><td>倍音構成はスペクトル解析後確定</td></tr>
+      <tr><td>F4.3</td><td>音声生成</td><td>エンベロープ処理</td><td>Processing</td><td>Attack/Decay/Sustain/Releaseをサンプル単位で適用</td><td></td></tr>
+      <tr><td>F4.4</td><td>音声生成</td><td>エフェクト処理</td><td>Processing</td><td>ビブラート → リバーブの順に適用</td><td></td></tr>
+      <tr><td>F4.5</td><td>音声生成</td><td>音声出力</td><td>Processing</td><td>バッファ書き込み・レイテンシ制御・停止時バッファ完了処理</td><td>ライブラリ候補：Minim</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888;">▲ 表1: 機能一覧（FBS）</p>
+
+  <h2>1.3 起動フロー・演奏ライフサイクル（図2）</h2>
+  <div class="mermaid-wrap">
+    <div class="cssd fccol" style="gap:0;">
+      <span class="nd se" style="padding:8px 20px;">電源ON・スイッチ投入</span>
+      <div class="fcvl"></div>
+      <span class="nd srv" style="display:block;text-align:center;max-width:340px;">サーバーArduino自己初期化<br><small>PROGMEM展開・BPM設定・SPI初期化</small></span>
+      <div class="fcvl"></div>
+      <span class="nd" style="display:block;text-align:center;max-width:320px;">楽器Arduino×4 CSを順次送信<br><small>ハンドシェイク確認</small></span>
+      <div class="fcvl"></div>
+      <span class="nd" style="display:block;text-align:center;padding:14px 20px;border-color:#e67e22;background:#fef9e7;font-weight:bold;">応答あり?</span>
+      <div class="fcvl"></div>
+      <div class="fcrow" style="gap:24px;margin:4px 0;">
+        <div class="fcbr">
+          <span class="dlbl g">応答あり</span>
+          <div class="fcvl"></div>
+          <span class="nd grn">アクティブ登録</span>
+        </div>
+        <div class="fcbr">
+          <span class="dlbl r">タイムアウト2s・3回失敗</span>
+          <div class="fcvl"></div>
+          <span class="nd skp">スキップ登録（無音パート）</span>
+        </div>
+      </div>
+      <div class="fcvl"></div>
+      <span class="nd" style="display:block;text-align:center;">全4台確認完了</span>
+      <div class="fcvl"></div>
+      <span class="nd" style="display:block;text-align:center;">BPMクロック一斉送信開始</span>
+      <div class="fcvl"></div>
+      <span class="nd srv" style="display:block;text-align:center;font-weight:bold;padding:10px 24px;">かえるの歌 自動演奏ループ</span>
+      <div class="fcvl"></div>
+      <span class="nd" style="display:block;text-align:center;padding:14px 20px;border-color:#e67e22;background:#fef9e7;font-weight:bold;">イベント?</span>
+      <div class="fcvl"></div>
+      <div class="fcrow" style="gap:6px;margin:4px 0;align-items:flex-start;">
+        <div class="fcbr" style="min-width:90px;">
+          <span class="dlbl">拍手検出</span><div class="fcvl"></div>
+          <span class="nd" style="font-size:11px;text-align:center;">BPMリアルタイム<br>更新</span>
+          <div class="fcvl"></div><span class="dlbl g">↺ ループへ</span>
+        </div>
+        <div class="fcbr" style="min-width:110px;">
+          <span class="dlbl s">人形設置</span><div class="fcvl"></div>
+          <span class="nd man" style="font-size:11px;text-align:center;">割り込み方式<br>対象パートミュート<br>手動演奏に切替</span>
+          <div class="fcvl"></div><span class="dlbl g">↺ ループへ</span>
+        </div>
+        <div class="fcbr" style="min-width:90px;">
+          <span class="dlbl g">人形除去</span><div class="fcvl"></div>
+          <span class="nd grn" style="font-size:11px;text-align:center;">自動演奏復帰</span>
+          <div class="fcvl"></div><span class="dlbl g">↺ ループへ</span>
+        </div>
+        <div class="fcbr" style="min-width:80px;">
+          <span class="dlbl">曲末</span><div class="fcvl"></div>
+          <span class="nd" style="font-size:11px;text-align:center;">先頭に戻り<br>ループ</span>
+          <div class="fcvl"></div><span class="dlbl g">↺ ループへ</span>
+        </div>
+        <div class="fcbr" style="min-width:110px;">
+          <span class="dlbl r">スイッチOFF</span><div class="fcvl"></div>
+          <span class="nd fsp" style="font-size:11px;text-align:center;">BPMクロック・SPI停止<br>バッファ完了処理</span>
+          <div class="fcvl"></div>
+          <span class="nd se" style="font-size:11px;padding:5px 12px;">終了</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図2: 起動・演奏ライフサイクル フロー図</p>
+
+  <h2>1.4 データモデル（ER図・論理設計）（図3）</h2>
+  <div class="mermaid-wrap">
+    <!-- エンティティ一覧 -->
+    <div class="er-grid">
+
+      <div class="er-entity">
+        <div class="er-head">SongData</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>notes</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>bpm_default</div>
+      </div>
+
+      <div class="er-entity">
+        <div class="er-head">SoundData</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>instrument_id</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>pitch</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>duration</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>velocity</div>
+      </div>
+
+      <div class="er-entity">
+        <div class="er-head">HarmonicTable</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>instrument_id</div>
+        <div class="er-attr"><span class="er-atype">float</span>harmonics</div>
+      </div>
+
+      <div class="er-entity er-purple">
+        <div class="er-head">BpmState</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>current_bpm</div>
+        <div class="er-attr"><span class="er-atype">int</span>ring_buffer</div>
+        <div class="er-attr"><span class="er-atype">float</span>avg</div>
+        <div class="er-attr"><span class="er-atype">float</span>stddev</div>
+      </div>
+
+      <div class="er-entity er-purple">
+        <div class="er-head">InstrumentState</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>id</div>
+        <div class="er-attr"><span class="er-atype">bool</span>active</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>error_count</div>
+        <div class="er-attr"><span class="er-atype">bool</span>is_manual</div>
+      </div>
+
+      <div class="er-entity er-purple">
+        <div class="er-head">EnvelopeState</div>
+        <div class="er-attr"><span class="er-atype">uint8</span>phase</div>
+        <div class="er-attr"><span class="er-atype">int</span>sample_pos</div>
+        <div class="er-attr"><span class="er-atype">float</span>adsr_params</div>
+      </div>
+
+    </div>
+
+    <!-- 関連（リレーション） -->
+    <table class="er-rel-table">
+      <thead>
+        <tr><th>エンティティA</th><th style="text-align:center;">多重度</th><th>エンティティB</th><th>ラベル</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="er-ent">SongData</td>        <td style="text-align:center;letter-spacing:1px;">1 ──▶ n</td><td class="er-ent">SoundData</td>     <td class="er-card">generates</td></tr>
+        <tr><td class="er-ent">InstrumentState</td> <td style="text-align:center;letter-spacing:1px;">1 ──▶ 1</td><td class="er-ent">SoundData</td>     <td class="er-card">owns</td></tr>
+        <tr><td class="er-ent">SoundData</td>        <td style="text-align:center;letter-spacing:1px;">1 ──▶ 1</td><td class="er-ent">HarmonicTable</td> <td class="er-card">references</td></tr>
+        <tr><td class="er-ent">SoundData</td>        <td style="text-align:center;letter-spacing:1px;">1 ──▶ 1</td><td class="er-ent">EnvelopeState</td> <td class="er-card">triggers</td></tr>
+        <tr><td class="er-ent">BpmState</td>         <td style="text-align:center;letter-spacing:1px;">1 ──▶ n</td><td class="er-ent">SongData</td>      <td class="er-card">controls timing</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図3: エンティティ関連図（論理設計）</p>
+
+  <h2>1.5 外部インターフェース仕様</h2>
+  <div class="card">
+    <h3>① SPI通信（サーバー ↔ 楽器Arduino）</h3>
+    <table>
+      <thead><tr><th>項目</th><th>仕様</th></tr></thead>
+      <tbody>
+        <tr><td>CSピン割り当て</td><td>楽器1:D4 / 楽器2:D5 / 楽器3:D6 / 楽器4:D7</td></tr>
+        <tr><td>データ構造</td><td>SoundData 4バイト固定長</td></tr>
+        <tr><td>BPM方向</td><td>サーバー → 楽器：BPMクロック信号（1バイト）</td></tr>
+        <tr><td>音データ方向</td><td>楽器 → サーバー：割り込み駆動 SoundData 送信</td></tr>
+        <tr><td>エラー処理</td><td>チェックサム方式・連続3回エラーでフェイルセーフ（以降無音）</td></tr>
+        <tr><td>ハンドシェイク</td><td>起動時タイムアウト2秒・リトライ3回</td></tr>
+      </tbody>
+    </table>
+    <h3 style="margin-top:18px;">② USBシリアル通信（サーバーArduino ↔ PC）</h3>
+    <table>
+      <thead><tr><th>項目</th><th>仕様</th></tr></thead>
+      <tbody>
+        <tr><td>ボーレート</td><td>115200 bps</td></tr>
+        <tr><td>データ形式</td><td>SoundData 4バイト固定長をそのまま転送</td></tr>
+        <tr><td>Processingハンドシェイク</td><td><span class="badge badge-done">決定：なし（自動受信開始）</span></td></tr>
+      </tbody>
+    </table>
+    <h3 style="margin-top:18px;">③ 圧力センサ入力</h3>
+    <table>
+      <thead><tr><th>項目</th><th>仕様</th></tr></thead>
+      <tbody>
+        <tr><td>ポーリング間隔</td><td>10ms（暫定）</td></tr>
+        <tr><td>NoteOn判定</td><td>アナログ値が閾値を上回った瞬間</td></tr>
+        <tr><td>NoteOff通知</td><td><span class="badge badge-done">決定：duration=0 のSoundDataを送信</span></td></tr>
+        <tr><td>共存方式</td><td><span class="badge badge-done">決定：割り込み方式（該当パートの自動演奏をミュートし手動演奏に切替）</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>1.6 操作インターフェース一覧</h2>
+  <table>
+    <thead><tr><th>操作名</th><th>操作手段</th><th>応答動作</th><th>担当ノード</th></tr></thead>
+    <tbody>
+      <tr><td>電源投入</td><td>スイッチON</td><td>起動シーケンス → かえるの歌演奏</td><td>サーバーArduino</td></tr>
+      <tr><td>手動演奏</td><td>カエル人形を圧力センサに置く</td><td>該当パート自動演奏ミュート → 手動発音</td><td>楽器Arduino</td></tr>
+      <tr><td>手動演奏停止</td><td>カエル人形を外す</td><td>自動演奏復帰</td><td>楽器Arduino</td></tr>
+      <tr><td>テンポ変更</td><td>拍手（マイクで検出）</td><td>BPMリアルタイム更新</td><td>サーバーArduino</td></tr>
+      <tr><td>強制停止</td><td>スイッチOFF</td><td>BPMクロック停止 → 全体停止</td><td>サーバーArduino</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888;">▲ 表2: 操作インターフェース一覧</p>
+</section>
+
+<!-- ===== 詳細設計 ===== -->
+<section id="detail">
+  <h1>2. 詳細設計（内部設計）</h1>
+  <p class="section-meta">開発者視点で「どのロジックで実現するか（How）」を定義する</p>
+
+  <h2>2.1 PBS対応表（機能→成果物マッピング）</h2>
+  <table>
+    <thead><tr><th>機能ID</th><th>機能名</th><th>対応PBS成果物（モジュール）</th><th>WBS ID</th></tr></thead>
+    <tbody>
+      <tr><td>F1.1</td><td>起動シーケンス</td><td>startup_sequence.ino / 起動スイッチ</td><td>212</td></tr>
+      <tr><td>F1.2</td><td>BPM管理</td><td>bpm_manager.ino / マイクモジュール</td><td>213, 214</td></tr>
+      <tr><td>F1.3</td><td>楽曲データ管理</td><td>song_data.h（PROGMEM）</td><td>213</td></tr>
+      <tr><td>F1.4</td><td>演奏終了・停止</td><td>playback_ctrl.ino</td><td>212, 213</td></tr>
+      <tr><td>F2.1</td><td>SPI通信</td><td>spi_master.ino / spi_slave.ino / SPIバス配線</td><td>212, 223, 231</td></tr>
+      <tr><td>F2.2</td><td>USBシリアル通信</td><td>serial_tx.ino / USBケーブル</td><td>214</td></tr>
+      <tr><td>F3.1</td><td>圧力センサ処理</td><td>sensor.ino / 圧力センサ・カエル人形</td><td>222</td></tr>
+      <tr><td>F3.2</td><td>マイク入力</td><td>mic_input.ino / マイクモジュール</td><td>214</td></tr>
+      <tr><td>F4.1</td><td>シリアルパース</td><td>SerialParser.pde</td><td>241</td></tr>
+      <tr><td>F4.2</td><td>加算合成</td><td>AdditiveSynth.pde</td><td>242</td></tr>
+      <tr><td>F4.3</td><td>エンベロープ処理</td><td>Envelope.pde</td><td>243</td></tr>
+      <tr><td>F4.4</td><td>エフェクト処理</td><td>Effects.pde</td><td>243</td></tr>
+      <tr><td>F4.5</td><td>音声出力</td><td>AudioOutput.pde / PC</td><td>241</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888;">▲ 表3: FBS-PBS対応表</p>
+
+  <h2>2.2 ファームウェアアーキテクチャ</h2>
+  <h3>2.2.1 サーバーArduinoモジュール構成（図4）</h3>
+  <div class="mermaid-wrap">
+    <div class="cssd">
+      <div class="sg" style="border-color:#2c3e50;">
+        <div class="sg-t" style="background:#ecf0f1;color:#2c3e50;">サーバーArduinoファームウェア</div>
+        <div class="fccol" style="gap:6px;">
+          <span class="nd drk" style="padding:7px 24px;">main loop()</span>
+          <div style="font-size:11px;color:#888;text-align:center;">↓ 呼び出し</div>
+          <div class="fcrow" style="gap:8px;width:100%;">
+            <div class="fcbr">
+              <span class="nd" style="font-size:11px;text-align:center;">startup_sequence<br><small>起動・ハンドシェイク</small></span>
+              <div class="fcvl"></div>
+              <span class="nd skp" style="font-size:11px;">instrument_state<br><small>楽器状態テーブル</small></span>
+            </div>
+            <div class="fcbr">
+              <span class="nd srv" style="font-size:11px;text-align:center;">spi_master<br><small>SPIマスタ・BPM送信<br>音データ受信・チェックサム</small></span>
+              <div class="fcvl"></div>
+              <div style="display:flex;gap:4px;">
+                <span class="nd skp" style="font-size:11px;">instrument_state</span>
+                <span class="nd grn" style="font-size:11px;">serial_tx<br><small>音データ転送</small></span>
+              </div>
+            </div>
+            <div class="fcbr">
+              <span class="nd" style="font-size:11px;text-align:center;">bpm_manager<br><small>BPM管理<br>リングバッファ</small></span>
+              <div class="fcvl"></div>
+              <span class="nd" style="font-size:11px;background:#fef9e7;border-color:#e67e22;">song_data (PROGMEM)<br><small>かえるの歌音符配列</small></span>
+            </div>
+            <div class="fcbr">
+              <span class="nd red" style="font-size:11px;">mic_input<br><small>拍手ピーク検出</small></span>
+              <div class="fcvl"></div>
+              <span class="nd" style="font-size:11px;">bpm_manager<br><small style="color:#888;">← 検出値送信</small></span>
+            </div>
+            <div class="fcbr">
+              <span class="nd" style="font-size:11px;">playback_ctrl<br><small>演奏タイミング<br>ループ管理</small></span>
+              <div class="fcvl"></div>
+              <span class="nd" style="font-size:11px;background:#fef9e7;border-color:#e67e22;">song_data (PROGMEM)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図4: サーバーArduinoモジュール構成</p>
+
+  <h3>2.2.2 楽器Arduinoモジュール構成（図5）</h3>
+  <div class="mermaid-wrap">
+    <div class="cssd">
+      <div class="sg" style="border-color:#8e44ad;">
+        <div class="sg-t" style="background:#f3e8ff;color:#8e44ad;">楽器Arduinoファームウェア（×4）</div>
+        <div class="fccol" style="gap:6px;">
+          <span class="nd drk" style="padding:7px 24px;">main loop()</span>
+          <div style="font-size:11px;color:#888;">↓</div>
+          <div class="fcrow" style="gap:12px;">
+            <div class="fcbr">
+              <span class="nd red" style="font-size:11px;text-align:center;">sensor.ino<br><small>圧力センサポーリング<br>NoteOn/NoteOff判定</small></span>
+              <div class="fcvl"></div>
+              <span class="nd" style="font-size:11px;text-align:center;">sound_data_gen<br><small>SoundData構造体生成</small></span>
+              <div class="fcvl"></div>
+              <span class="nd srv" style="font-size:11px;text-align:center;">spi_slave<br><small>SPIスレーブ<br>BPMクロック受信<br>割り込み音データ送信</small></span>
+              <div class="fcvl"></div>
+              <span class="nd man" style="font-size:11px;text-align:center;">mode_ctrl<br><small>自動演奏/手動演奏切替</small></span>
+              <div style="font-size:10px;color:#888;">↓ フィードバック</div>
+              <span class="nd" style="font-size:11px;text-align:center;">sound_data_gen<br><small style="color:#888;">← モード反映</small></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図5: 楽器Arduinoモジュール構成</p>
+
+  <h2>2.3 シーケンス図</h2>
+  <h3>2.3.1 起動シーケンス（図6）</h3>
+  <div class="mermaid-wrap">
+    <div class="cssd" style="overflow-x:auto;">
+      <table class="sq">
+        <tr class="sqh">
+          <th style="width:12%;">スイッチ</th>
+          <th style="width:28%;">サーバーArduino</th>
+          <th style="width:28%;">楽器Arduino×4</th>
+          <th style="width:32%;">Processing(PC)</th>
+        </tr>
+        <tr>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>電源ON</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="sqsl">自己初期化（PROGMEM展開・BPM設定・SPI初期化）</span></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr class="lp"><td colspan="4">　loop: CS送信（楽器1〜4順次）</td></tr>
+        <tr>
+          <td></td>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>CSアサート（ハンドシェイク要求）</td>
+          <td></td>
+        </tr>
+        <tr class="at"><td colspan="4">　　alt: 応答あり（2秒以内）</td></tr>
+        <tr>
+          <td></td>
+          <td>ハンドシェイク応答 <span style="color:#27ae60;font-size:12px;">←←←</span></td>
+          <td style="text-align:right;"><span style="color:#27ae60;font-size:12px;">←</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="sqsl">アクティブ登録</span></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr class="ae"><td colspan="4">　　else: タイムアウト（3回リトライ後）</td></tr>
+        <tr>
+          <td></td>
+          <td><span class="sqsl">スキップ登録（無音パート）</span></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr class="ae"><td colspan="4">　end</td></tr>
+        <tr class="ae"><td colspan="4">　end loop</td></tr>
+        <tr>
+          <td></td>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>BPMクロック一斉送信開始</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td></td>
+          <td>音データシリアル送信開始</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="sqsl">かえるの歌 自動演奏ループ開始</span></td>
+          <td></td>
+          <td></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図6: 起動シーケンス図</p>
+
+  <h3>2.3.2 手動演奏シーケンス（図7）</h3>
+  <div class="mermaid-wrap">
+    <div class="cssd" style="overflow-x:auto;">
+      <table class="sq">
+        <tr class="sqh">
+          <th style="width:14%;">圧力センサ</th>
+          <th style="width:26%;">楽器Arduino</th>
+          <th style="width:28%;">サーバーArduino</th>
+          <th style="width:32%;">Processing</th>
+        </tr>
+        <tr>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>アナログ値 &gt; 閾値（人形設置）</td>
+          <td></td><td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="sqsl">NoteOn検出・SoundData生成
+（duration=255, velocity=127）</span></td>
+          <td></td><td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>SPI割り込み送信（SoundData 4byte）</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td><td></td>
+          <td><span class="sqsl">チェックサム検証OK
+該当パート→手動モード（自動ミュート）</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td><td></td>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>シリアル転送（SoundData 4byte）</td>
+        </tr>
+        <tr>
+          <td></td><td></td><td></td>
+          <td><span class="sqsl">パース → 加算合成 → ADSR → エフェクト → 音声出力</span></td>
+        </tr>
+        <tr style="background:#f9f9f9;"><td colspan="4" style="padding:2px 8px;font-size:10px;color:#aaa;">—— NoteOff ——</td></tr>
+        <tr>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>アナログ値 &lt; 閾値（人形除去）</td>
+          <td></td><td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="sqsl">NoteOff検出・SoundData生成
+（duration=0）</span></td>
+          <td></td><td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>SPI割り込み送信（NoteOff SoundData）</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td><td></td>
+          <td><span class="sqsl">該当パート → 自動演奏モード復帰</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td><td></td>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>シリアル転送（NoteOff SoundData）</td>
+        </tr>
+        <tr>
+          <td></td><td></td><td></td>
+          <td><span class="sqsl">Releaseフェーズ開始 → 減衰停止</span></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図7: 手動演奏シーケンス図</p>
+
+  <h2>2.4 Processing クラス構成（図8）</h2>
+  <div class="mermaid-wrap">
+    <div class="cssd">
+      <div class="clg">
+        <div class="clb">
+          <div class="clbh">SerialParser</div>
+          <div class="clbs">
+            <div class="clba"><span class="vi">-</span> Serial port</div>
+            <div class="clba"><span class="vi">-</span> bytes buffer</div>
+          </div>
+          <div class="clbs">
+            <div class="clba">+ void update()</div>
+            <div class="clba">+ SoundData parse(bytes raw)</div>
+          </div>
+        </div>
+        <div class="clb">
+          <div class="clbh">SoundData</div>
+          <div class="clbs">
+            <div class="clba">+ int instrument_id</div>
+            <div class="clba">+ int pitch</div>
+            <div class="clba">+ int duration</div>
+            <div class="clba">+ int velocity</div>
+          </div>
+        </div>
+        <div class="clb">
+          <div class="clbh">AdditiveSynth</div>
+          <div class="clbs">
+            <div class="clba"><span class="vi">-</span> HarmonicTableArray tables</div>
+            <div class="clba"><span class="vi">-</span> float sampleRate</div>
+          </div>
+          <div class="clbs">
+            <div class="clba">+ floatArray synthesize(SoundData sd, int n)</div>
+          </div>
+        </div>
+        <div class="clb">
+          <div class="clbh">HarmonicTable</div>
+          <div class="clbs">
+            <div class="clba">+ int instrument_id</div>
+            <div class="clba">+ floatArray amplitudes</div>
+            <div class="clba">+ intArray orders</div>
+          </div>
+        </div>
+        <div class="clb">
+          <div class="clbh">Envelope</div>
+          <div class="clbs">
+            <div class="clba"><span class="vi">-</span> float attack</div>
+            <div class="clba"><span class="vi">-</span> float decay</div>
+            <div class="clba"><span class="vi">-</span> float sustain</div>
+            <div class="clba"><span class="vi">-</span> float release</div>
+            <div class="clba"><span class="vi">-</span> int phase</div>
+          </div>
+          <div class="clbs">
+            <div class="clba">+ float apply(float sample, boolean noteOn)</div>
+          </div>
+        </div>
+        <div class="clb">
+          <div class="clbh">Effects</div>
+          <div class="clbs">
+            <div class="clba">+ float vibrato(float s, float time, float depth, float rate)</div>
+            <div class="clba">+ float reverb(float s, floatArray buf, int pos, float att)</div>
+          </div>
+        </div>
+        <div class="clb">
+          <div class="clbh">AudioOutput</div>
+          <div class="clbs">
+            <div class="clba"><span class="vi">-</span> int bufferSize</div>
+          </div>
+          <div class="clbs">
+            <div class="clba">+ void write(floatArray samples)</div>
+            <div class="clba">+ void flush()</div>
+          </div>
+        </div>
+      </div>
+      <table class="er-rel-table" style="font-size:11.5px;">
+        <thead><tr><th>クラスA</th><th style="text-align:center;">関係</th><th>クラスB</th><th>ラベル</th></tr></thead>
+        <tbody>
+          <tr><td class="er-ent">SerialParser</td><td style="text-align:center;">──▶</td><td class="er-ent">SoundData</td><td class="er-card">creates</td></tr>
+          <tr><td class="er-ent">AdditiveSynth</td><td style="text-align:center;">──▶</td><td class="er-ent">SoundData</td><td class="er-card">reads</td></tr>
+          <tr><td class="er-ent">AdditiveSynth</td><td style="text-align:center;">──▶</td><td class="er-ent">HarmonicTable</td><td class="er-card">references</td></tr>
+          <tr><td class="er-ent">AudioOutput</td><td style="text-align:center;">──▶</td><td class="er-ent">Effects</td><td class="er-card">applies</td></tr>
+          <tr><td class="er-ent">AudioOutput</td><td style="text-align:center;">──▶</td><td class="er-ent">Envelope</td><td class="er-card">applies</td></tr>
+          <tr><td class="er-ent">AudioOutput</td><td style="text-align:center;">──▶</td><td class="er-ent">AdditiveSynth</td><td class="er-card">calls</td></tr>
+          <tr><td class="er-ent">AudioOutput</td><td style="text-align:center;">──▶</td><td class="er-ent">SerialParser</td><td class="er-card">reads</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図8: Processing クラス構成図</p>
+
+  <h2>2.5 物理データ設計（SoundData構造体）</h2>
+  <table>
+    <thead><tr><th>フィールド名</th><th>型</th><th>バイト数</th><th>値域</th><th>説明</th></tr></thead>
+    <tbody>
+      <tr><td>instrument_id</td><td>uint8_t</td><td>1</td><td>0〜3</td><td>楽器番号（0:メロディ1, 1:メロディ2, 2:メロディ3, 3:リズム）</td></tr>
+      <tr><td>pitch</td><td>uint8_t</td><td>1</td><td>0〜127</td><td><span class="badge badge-done">決定：MIDIノート番号</span>（中央C=60）</td></tr>
+      <tr><td>duration</td><td>uint8_t</td><td>1</td><td>0〜255 / 0=NoteOff</td><td>音長（16分音符単位）。<strong>0: NoteOff通知</strong></td></tr>
+      <tr><td>velocity</td><td>uint8_t</td><td>1</td><td>0〜127</td><td>音の強さ（手動演奏時は127固定）</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888;">▲ 表4: SoundData構造体 物理設計（合計4バイト固定長）</p>
+
+  <h2>2.6 楽器パート 状態遷移図（図9）</h2>
+  <div class="mermaid-wrap">
+    <div class="cssd">
+      <table class="sttbl">
+        <thead><tr><th>遷移元</th><th style="text-align:center;">イベント / 条件</th><th>遷移先</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="sttag i">● 初期</span></td>
+            <td style="text-align:center;color:#888;font-size:11px;">（起動）</td>
+            <td><span class="sttag k">未接続</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag k">未接続</span></td>
+            <td style="text-align:center;font-size:11px;color:#1a6b3c;">ハンドシェイク成功</td>
+            <td><span class="sttag a">アクティブ（自動演奏）</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag k">未接続</span></td>
+            <td style="text-align:center;font-size:11px;color:#922b21;">タイムアウト / 3回失敗</td>
+            <td><span class="sttag k">スキップ（無音パート）</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag a">アクティブ（自動演奏）</span></td>
+            <td style="text-align:center;font-size:11px;color:#7d4e00;">NoteOn受信（人形設置）</td>
+            <td><span class="sttag m">アクティブ（手動演奏）</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag m">アクティブ（手動演奏）</span></td>
+            <td style="text-align:center;font-size:11px;color:#1a6b3c;">NoteOff受信（人形除去）</td>
+            <td><span class="sttag a">アクティブ（自動演奏）</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag a">アクティブ（自動演奏）</span></td>
+            <td style="text-align:center;font-size:11px;color:#922b21;">SPI通信エラー×3</td>
+            <td><span class="sttag f">フェイルセーフ（無音）</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag m">アクティブ（手動演奏）</span></td>
+            <td style="text-align:center;font-size:11px;color:#922b21;">SPI通信エラー×3</td>
+            <td><span class="sttag f">フェイルセーフ（無音）</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag f">フェイルセーフ（無音）</span></td>
+            <td style="text-align:center;font-size:11px;color:#555;">電源再投入</td>
+            <td><span class="sttag i">● 終了</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag k">スキップ（無音パート）</span></td>
+            <td style="text-align:center;font-size:11px;color:#555;">電源再投入</td>
+            <td><span class="sttag i">● 終了</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図9: 楽器パート 状態遷移図</p>
+
+  <h2>2.7 エラーハンドリング一覧</h2>
+  <table>
+    <thead><tr><th>エラー種別</th><th>検出条件</th><th>対処</th><th>復帰方法</th></tr></thead>
+    <tbody>
+      <tr><td>SPI通信エラー</td><td>チェックサム不一致が1楽器で3回連続</td><td>該当楽器からのデータ受信停止・無音継続</td><td>電源再投入（復帰なし）</td></tr>
+      <tr><td>ハンドシェイク失敗</td><td>起動時タイムアウト2秒・3回後も無応答</td><td>スキップ登録して演奏続行</td><td>電源再投入</td></tr>
+      <tr><td>シリアル切断</td><td>ProcessingがUSBシリアル切断検知</td><td>バッファ内サンプル出力完了後に停止</td><td>USB再接続</td></tr>
+      <tr><td>圧力センサ異常値</td><td>ポーリング値がADCフルスケール付近</td><td>閾値超過として扱い演奏継続</td><td>自動回復</td></tr>
+      <tr><td>マイクノイズ</td><td>テンポ検出値がリングバッファ平均±2σ外れ</td><td>外れ値として破棄、BPM更新なし</td><td>自動回復</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888;">▲ 表5: エラーハンドリング一覧</p>
+</section>
+
+<!-- ===== 担当割り振り ===== -->
+<section id="assign">
+  <h1>3. 担当割り振り</h1>
+  <p class="section-meta">PM側3名（コード監修・設計レビュー含む）・開発側3名　＋ バックアップ体制</p>
+
+  <h2>3.1 メンバー一覧・バックアップ体制</h2>
+  <div class="member-grid">
+    <div class="member-card">
+      <div class="name">佐藤 <span class="badge badge-pm">PM側</span></div>
+      <div class="role">プロジェクトリーダー / 設計統括</div>
+      <div class="backup">⚡ バックアップ担当：<strong>藤本</strong>（PM補佐が全体引継ぎ）</div>
+      <ul class="tasks">
+        <li>全体進捗管理・WBS更新</li>
+        <li>仕様書策定・未確定事項の意思決定</li>
+        <li>回路設計監修・SPIピン構成決定</li>
+        <li>設計書レビュー（基本設計全体）</li>
+        <li>デモシナリオ作成・リハーサル指揮</li>
+      </ul>
+    </div>
+    <div class="member-card">
+      <div class="name">藤本 <span class="badge badge-pm">PM側</span></div>
+      <div class="role">PM補佐 / ファームウェア監修</div>
+      <div class="backup">⚡ バックアップ担当：<strong>佐藤</strong>（PL直接引継ぎ）</div>
+      <ul class="tasks">
+        <li>議事録作成・情報共有</li>
+        <li>仕様書更新・レビュー補助</li>
+        <li>サーバーArduinoコードレビュー</li>
+        <li>結合テスト設計・テスト実施補助</li>
+        <li>音色チューニング監修</li>
+      </ul>
+    </div>
+    <div class="member-card">
+      <div class="name">此上 <span class="badge badge-pm">PM側</span></div>
+      <div class="role">品質管理 / Processing監修</div>
+      <div class="backup">⚡ バックアップ担当：<strong>藤本</strong>（テスト計画引継ぎ）</div>
+      <ul class="tasks">
+        <li>テスト計画立案・品質基準策定</li>
+        <li>Processingアプリコードレビュー</li>
+        <li>楽器Arduinoファームウェアレビュー補助</li>
+        <li>システムテスト設計・実施</li>
+        <li>非機能要件管理（レイテンシ・安定性）</li>
+      </ul>
+    </div>
+    <div class="member-card dev">
+      <div class="name">大菅 <span class="badge badge-dev">開発側</span></div>
+      <div class="role">サーバーArduinoファームウェア担当</div>
+      <div class="backup">⚡ バックアップ担当：<strong>青木</strong>（ハードウェア知識あり）+ <strong>藤本</strong>（コードレビュー）</div>
+      <ul class="tasks">
+        <li>起動シーケンス・SPIマスタ実装（WBS:212）</li>
+        <li>BPM管理・楽曲データPROGMEM実装（WBS:213）</li>
+        <li>USBシリアル通信・マイク入力実装（WBS:214）</li>
+        <li>サーバーArduino組み立て（WBS:211）</li>
+        <li>サーバーArduino単体テスト（WBS:311）</li>
+      </ul>
+    </div>
+    <div class="member-card dev">
+      <div class="name">青木 <span class="badge badge-dev">開発側</span></div>
+      <div class="role">楽器Arduino・回路設計担当</div>
+      <div class="backup">⚡ バックアップ担当：<strong>大菅</strong>（並行ハードウェア経験）+ <strong>佐藤</strong>（回路監修の知識）</div>
+      <ul class="tasks">
+        <li>SPI配線・ピン割り当て設計（WBS:121）</li>
+        <li>マイクモジュール選定・検証（WBS:122）</li>
+        <li>楽器Arduino×4組み立て（WBS:221）</li>
+        <li>圧力センサ処理・音データ生成実装（WBS:222）</li>
+        <li>SPIスレーブ・割り込み送信実装（WBS:223）</li>
+        <li>SPIバス配線（WBS:231）/ 閾値調整（WBS:332）</li>
+      </ul>
+    </div>
+    <div class="member-card dev">
+      <div class="name">新保 <span class="badge badge-dev">開発側</span></div>
+      <div class="role">Processingアプリケーション担当</div>
+      <div class="backup">⚡ バックアップ担当：<strong>此上</strong>（Processingレビュー担当で内容把握）</div>
+      <ul class="tasks">
+        <li>Processing音声処理設計・ライブラリ選定（WBS:132）</li>
+        <li>シリアル通信・パース・音声出力基盤実装（WBS:241）</li>
+        <li>音声合成エンジン実装（WBS:242）</li>
+        <li>エンベロープ・エフェクト実装（WBS:243）</li>
+        <li>Processingアプリ単体テスト（WBS:313）</li>
+        <li>音色チューニング（WBS:333）</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>3.2 WBSベース 担当割り振り表</h2>
+  <div class="warn"><strong>⚡ バックアップ担当：</strong>主担当が体調不良等で作業不能になった場合、バックアップ担当が引き継ぐ。引継ぎを円滑にするため、各タスク担当者はコード・設計書にコメント・ドキュメントを随時更新すること。</div>
+  <table>
+    <thead>
+      <tr><th>ID</th><th>タスク名</th><th>見積</th><th>主担当</th><th>監修（PM）</th><th>バックアップ</th><th>優先度</th><th>依存</th></tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="8" class="wbs-phase">【設計フェーズ】第5週</td></tr>
+      <tr><td colspan="8" class="wbs-cat">110 仕様設計</td></tr>
+      <tr><td>111</td><td>未確定事項の決定</td><td>8h</td><td class="佐藤">佐藤</td><td class="藤本">藤本</td><td>藤本</td><td><span class="badge badge-high">★★★</span></td><td>なし</td></tr>
+      <tr><td>112</td><td>仕様書更新・レビュー</td><td>8h</td><td class="藤本">藤本</td><td class="佐藤">佐藤</td><td>佐藤</td><td><span class="badge badge-high">★★★</span></td><td>111</td></tr>
+      <tr><td colspan="8" class="wbs-cat">120 回路設計</td></tr>
+      <tr><td>121</td><td>SPI配線・ピン割り当て設計</td><td>8h</td><td class="青木">青木</td><td class="佐藤">佐藤</td><td>大菅</td><td><span class="badge badge-high">★★★</span></td><td>111</td></tr>
+      <tr><td>122</td><td>マイクモジュール選定・検証</td><td>16h</td><td class="青木">青木</td><td class="此上">此上</td><td>大菅</td><td><span class="badge badge-med">★★☆</span></td><td>111</td></tr>
+      <tr><td colspan="8" class="wbs-cat">130 ソフトウェア設計</td></tr>
+      <tr><td>131</td><td>ファームウェアアーキテクチャ設計</td><td>8h</td><td class="佐藤">佐藤</td><td class="藤本">藤本</td><td>藤本</td><td><span class="badge badge-high">★★★</span></td><td>111</td></tr>
+      <tr><td>132</td><td>Processing音声処理設計（ライブラリ選定含む）</td><td>16h</td><td class="新保">新保</td><td class="此上">此上</td><td>此上</td><td><span class="badge badge-high">★★★</span></td><td>111</td></tr>
+
+      <tr><td colspan="8" class="wbs-phase">【実装フェーズ】第6〜8週</td></tr>
+      <tr><td colspan="8" class="wbs-cat">210 サーバーArduino実装</td></tr>
+      <tr><td>211</td><td>サーバーArduino組み立て</td><td>8h</td><td class="大菅">大菅</td><td class="佐藤">佐藤</td><td>青木</td><td><span class="badge badge-high">★★★</span></td><td>121・122</td></tr>
+      <tr><td>212</td><td>起動シーケンス・SPI通信実装（エラーハンドリング含む）</td><td>24h</td><td class="大菅">大菅</td><td class="藤本">藤本</td><td>青木</td><td><span class="badge badge-high">★★★</span></td><td>131</td></tr>
+      <tr><td>213</td><td>BPM管理・楽曲データ実装（PROGMEMかえるの歌格納）</td><td>24h</td><td class="大菅">大菅</td><td class="藤本">藤本</td><td>青木</td><td><span class="badge badge-high">★★★</span></td><td>131</td></tr>
+      <tr><td>214</td><td>USBシリアル通信・マイク入力・演奏制御実装</td><td>16h</td><td class="大菅">大菅</td><td class="藤本">藤本</td><td>青木</td><td><span class="badge badge-med">★★☆</span></td><td>131</td></tr>
+      <tr><td colspan="8" class="wbs-cat">220 楽器Arduino実装</td></tr>
+      <tr><td>221</td><td>楽器Arduino×4組み立て</td><td>16h</td><td class="青木">青木</td><td class="佐藤">佐藤</td><td>大菅</td><td><span class="badge badge-high">★★★</span></td><td>121</td></tr>
+      <tr><td>222</td><td>圧力センサ処理・音データ生成実装</td><td>16h</td><td class="青木">青木</td><td class="藤本">藤本</td><td>大菅</td><td><span class="badge badge-high">★★★</span></td><td>131</td></tr>
+      <tr><td>223</td><td>SPIスレーブ・割り込み送信実装</td><td>16h</td><td class="青木">青木</td><td class="藤本">藤本</td><td>大菅</td><td><span class="badge badge-high">★★★</span></td><td>131</td></tr>
+      <tr><td colspan="8" class="wbs-cat">230 通信インターフェース実装</td></tr>
+      <tr><td>231</td><td>SPIバス配線・USBケーブル接続</td><td>8h</td><td class="青木">青木</td><td class="佐藤">佐藤</td><td>大菅</td><td><span class="badge badge-high">★★★</span></td><td>211・221</td></tr>
+      <tr><td colspan="8" class="wbs-cat">240 Processingアプリケーション実装</td></tr>
+      <tr><td>241</td><td>シリアル通信・パース・音声出力基盤実装（バッファ管理）</td><td>24h</td><td class="新保">新保</td><td class="此上">此上</td><td>此上</td><td><span class="badge badge-high">★★★</span></td><td>132</td></tr>
+      <tr><td>242</td><td>音声合成エンジン実装（加算合成・倍音構成テーブル）</td><td>24h</td><td class="新保">新保</td><td class="此上">此上</td><td>此上</td><td><span class="badge badge-high">★★★</span></td><td>132</td></tr>
+      <tr><td>243</td><td>エンベロープ・エフェクト実装（ADSR・ビブラート・リバーブ）</td><td>24h</td><td class="新保">新保</td><td class="此上">此上</td><td>此上</td><td><span class="badge badge-med">★★☆</span></td><td>241・242</td></tr>
+
+      <tr><td colspan="8" class="wbs-phase">【テストフェーズ】第8〜9週</td></tr>
+      <tr><td colspan="8" class="wbs-cat">310 単体テスト</td></tr>
+      <tr><td>311</td><td>サーバーArduino単体テスト</td><td>8h</td><td class="大菅">大菅</td><td class="藤本">藤本</td><td>青木</td><td><span class="badge badge-high">★★★</span></td><td>212・213・214</td></tr>
+      <tr><td>312</td><td>楽器Arduino単体テスト</td><td>8h</td><td class="青木">青木</td><td class="此上">此上</td><td>大菅</td><td><span class="badge badge-high">★★★</span></td><td>222・223</td></tr>
+      <tr><td>313</td><td>Processingアプリ単体テスト</td><td>8h</td><td class="新保">新保</td><td class="此上">此上</td><td>此上</td><td><span class="badge badge-high">★★★</span></td><td>241・242・243</td></tr>
+      <tr><td colspan="8" class="wbs-cat">320 結合テスト</td></tr>
+      <tr><td>321</td><td>SPI通信結合テスト（サーバー↔楽器Arduino）</td><td>16h</td><td class="大菅">大菅・青木</td><td class="藤本">藤本</td><td>此上</td><td><span class="badge badge-high">★★★</span></td><td>231・311・312</td></tr>
+      <tr><td>322</td><td>シリアル通信結合テスト（サーバー↔PC）</td><td>8h</td><td class="大菅">大菅・新保</td><td class="此上">此上</td><td>藤本</td><td><span class="badge badge-high">★★★</span></td><td>231・311・313</td></tr>
+      <tr><td colspan="8" class="wbs-cat">330 システムテスト・調整</td></tr>
+      <tr><td>331</td><td>全体演奏システムテスト（かえるの歌通し確認）</td><td>16h</td><td class="此上">此上</td><td class="佐藤">佐藤・藤本</td><td>藤本</td><td><span class="badge badge-high">★★★</span></td><td>321・322</td></tr>
+      <tr><td>332</td><td>圧力センサ閾値調整（実機調整）</td><td>8h</td><td class="青木">青木</td><td class="此上">此上</td><td>大菅</td><td><span class="badge badge-med">★★☆</span></td><td>321</td></tr>
+      <tr><td>333</td><td>音色チューニング（倍音構成・ADSR・エフェクト調整）</td><td>24h</td><td class="新保">新保</td><td class="藤本">藤本・此上</td><td>此上</td><td><span class="badge badge-med">★★☆</span></td><td>331</td></tr>
+
+      <tr><td colspan="8" class="wbs-phase">【デモ準備・バッファ】第10週</td></tr>
+      <tr><td colspan="8" class="wbs-cat">340 デモ準備</td></tr>
+      <tr><td>341</td><td>デモシナリオ作成</td><td>8h</td><td class="佐藤">佐藤</td><td class="藤本">藤本</td><td>藤本</td><td><span class="badge badge-med">★★☆</span></td><td>331</td></tr>
+      <tr><td>342</td><td>リハーサル・最終調整</td><td>16h</td><td class="全員">全員</td><td class="全員">—</td><td>—</td><td><span class="badge badge-med">★★☆</span></td><td>341・333</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888;">▲ 表6: WBSベース 担当割り振り表（総見積: 376h）</p>
+</section>
+
+<!-- ===== スケジュール ===== -->
+<section id="schedule">
+  <h1>4. スケジュール・ガントチャート・チェックポイント</h1>
+  <p class="section-meta">第5〜10週のスケジュール管理・体調不良対応・確認ゲート</p>
+
+  <h2>4.1 週次フェーズ概要</h2>
+  <div class="phase-bar" style="font-size:12px;">
+    <div class="phase-design">5週<br>設計</div>
+    <div class="phase-impl" style="flex:2;">6〜7週<br>実装（前半）</div>
+    <div class="phase-impl" style="background:#1e8449; flex:2;">8〜9週<br>実装・テスト（後半）</div>
+    <div class="phase-buffer">10週<br>バッファ・デモ</div>
+  </div>
+
+  <h2>4.2 ガントチャート（図10）</h2>
+  <p>図10に第5〜10週のWBSタスクスケジュールを示す。<code>crit</code>（赤）はクリティカルパス、◆はチェックポイント。</p>
+  <div class="mermaid-wrap">
+    <div class="gtt">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:28px;">ID</th>
+            <th style="text-align:left;min-width:200px;">タスク名</th>
+            <th style="width:40px;">担当</th>
+            <th style="width:38px;background:#2980b9;">W5</th>
+            <th style="width:38px;background:#27ae60;">W6</th>
+            <th style="width:38px;background:#1e8449;">W7</th>
+            <th style="width:38px;background:#1a6b3c;">W8</th>
+            <th style="width:38px;background:#e67e22;">W9</th>
+            <th style="width:38px;background:#8e44ad;">W10</th>
+            <th style="width:32px;">種別</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="gs"><td colspan="10">【設計フェーズ】第5週（4/28〜5/2）</td></tr>
+          <tr><td>111</td><td>未確定事項の決定</td><td>佐藤</td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>112</td><td>仕様書更新・レビュー</td><td>藤本</td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td></td><td></td><td style="font-size:10px;color:#3498db;"></td></tr>
+          <tr><td>121</td><td>SPI配線設計</td><td>青木</td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>131</td><td>FWアーキテクチャ設計</td><td>佐藤</td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>122</td><td>マイクモジュール選定・検証</td><td>青木</td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+          <tr><td>132</td><td>Processing音声処理設計</td><td>新保</td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+          <tr class="ms"><td colspan="10">◆ CP1：設計レビュー・仕様書確定（5/2）</td></tr>
+          <tr class="gs"><td colspan="10">【実装フェーズ前半】第6週（5/5〜5/9）</td></tr>
+          <tr><td>211</td><td>サーバーArduino組み立て</td><td>大菅</td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━</td><td></td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>221</td><td>楽器Arduino×4組み立て</td><td>青木</td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>241</td><td>Processingシリアル基盤実装</td><td>新保</td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td><td></td><td></td><td></td><td></td></tr>
+          <tr class="ms"><td colspan="10">◆ CP2：ハードウェア組み立て完了確認（5/9）</td></tr>
+          <tr class="gs"><td colspan="10">【実装フェーズ中盤】第7週（5/12〜5/16）</td></tr>
+          <tr><td>212</td><td>起動シーケンス・SPI通信実装</td><td>大菅</td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>222</td><td>圧力センサ処理実装</td><td>青木</td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>223</td><td>SPIスレーブ実装</td><td>青木</td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>242</td><td>音声合成エンジン実装</td><td>新保</td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td><td></td><td></td><td></td></tr>
+          <tr><td>213</td><td>BPM管理・楽曲データ実装</td><td>大菅</td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr class="ms"><td colspan="10">◆ CP3：SPIプロトタイプ通信動作確認（5/15）</td></tr>
+          <tr class="gs"><td colspan="10">【実装フェーズ後半・単体テスト】第8週（5/19〜5/23）</td></tr>
+          <tr><td>214</td><td>シリアル通信・マイク実装</td><td>大菅</td><td></td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td></td><td></td></tr>
+          <tr><td>231</td><td>SPIバス配線</td><td>青木</td><td></td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━</td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>243</td><td>エンベロープ・エフェクト実装</td><td>新保</td><td></td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td><td></td><td></td></tr>
+          <tr><td>311</td><td>サーバーArduino単体テスト</td><td>大菅</td><td></td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━</td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>312</td><td>楽器Arduino単体テスト</td><td>青木</td><td></td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━</td><td></td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>313</td><td>Processingアプリ単体テスト</td><td>新保</td><td></td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━</td><td></td><td></td><td></td></tr>
+          <tr class="ms"><td colspan="10">◆ CP4：単体テスト完了確認（5/23）</td></tr>
+          <tr class="gs"><td colspan="10">【テスト・調整】第9週（5/26〜5/30）</td></tr>
+          <tr><td>321</td><td>SPI結合テスト</td><td>大菅・青木</td><td></td><td></td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>322</td><td>シリアル結合テスト</td><td>大菅・新保</td><td></td><td></td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━</td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr><td>332</td><td>圧力センサ閾値調整</td><td>青木</td><td></td><td></td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━</td><td></td><td></td></tr>
+          <tr><td>333</td><td>音色チューニング</td><td>新保</td><td></td><td></td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td><td></td></tr>
+          <tr><td>331</td><td>全体システムテスト</td><td>此上</td><td></td><td></td><td></td><td></td><td style="background:#e74c3c;color:#fff;text-align:center;font-size:10px;">━━</td><td></td><td style="font-size:10px;color:#e74c3c;">crit</td></tr>
+          <tr class="ms"><td colspan="10">◆ CP5：システムテスト完了確認（5/30）</td></tr>
+          <tr class="gs"><td colspan="10">【バッファ・デモ準備】第10週（6/2〜6/6）</td></tr>
+          <tr><td>—</td><td>バッファ（スリップ対応・予備作業）</td><td>全員</td><td></td><td></td><td></td><td></td><td></td><td style="background:#95a5a6;color:#fff;text-align:center;font-size:10px;">━━━</td><td></td></tr>
+          <tr><td>341</td><td>デモシナリオ作成</td><td>佐藤</td><td></td><td></td><td></td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━</td><td></td></tr>
+          <tr><td>342</td><td>リハーサル・最終調整</td><td>全員</td><td></td><td></td><td></td><td></td><td></td><td style="background:#3498db;color:#fff;text-align:center;font-size:10px;">━━</td><td></td></tr>
+          <tr class="ms"><td colspan="10">◆ CP6：デモリハーサル最終確認（6/6）</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="gantt-legend">
+    <div class="gantt-legend-item"><div class="gantt-legend-color" style="background:#e74c3c;"></div>クリティカルパス（crit）</div>
+    <div class="gantt-legend-item"><div class="gantt-legend-color" style="background:#3498db;"></div>通常タスク</div>
+    <div class="gantt-legend-item"><div class="gantt-legend-color" style="background:#95a5a6;"></div>バッファ期間</div>
+    <div class="gantt-legend-item"><span>◆ チェックポイント（CP）</span></div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図10: ガントチャート（第5〜10週）</p>
+
+  <h2>4.3 チェックポイント（確認ゲート）一覧</h2>
+  <p>各チェックポイントはゲート方式：<strong>通過条件を満たさない場合、次フェーズに進まず当週に修正を行う。</strong></p>
+  <div class="cp-timeline">
+
+    <div class="cp-row">
+      <div class="cp-dot">CP1</div>
+      <div class="cp-content">
+        <div class="cp-week">第5週末（2026-05-02）</div>
+        <div class="cp-title">◆ 設計レビュー・仕様書確定ゲート</div>
+        <ul class="cp-items">
+          <li>✅ SoundData構造体の全フィールド（型・単位・バイト数）が確定していること</li>
+          <li>✅ SPIのCSピン割り当てが確定していること（D4〜D7）</li>
+          <li>✅ 楽曲データ管理主体が確定していること（→ サーバーArduino PROGMEM）</li>
+          <li>✅ 圧力センサとの共存方式が確定していること（→ 割り込み方式）</li>
+          <li>✅ Processingの音声ライブラリ候補が決まっていること</li>
+          <li>✅ 仕様書がチーム全員にレビューされ承認されていること</li>
+        </ul>
+        <p style="margin-top:6px; font-size:12px; color:#6d28d9;"><strong>判定者：佐藤（PL）</strong>　未通過の場合：10週バッファで対応</p>
+      </div>
+    </div>
+
+    <div class="cp-row">
+      <div class="cp-dot">CP2</div>
+      <div class="cp-content">
+        <div class="cp-week">第6週末（2026-05-09）</div>
+        <div class="cp-title">◆ ハードウェア組み立て完了確認ゲート</div>
+        <ul class="cp-items">
+          <li>✅ サーバーArduino（ボード・マイク・スイッチ・配線）の組み立てが完了していること</li>
+          <li>✅ 楽器Arduino×4の組み立てが完了していること</li>
+          <li>✅ 各ボードへの電源供給が正常であることを目視確認していること</li>
+          <li>✅ Processingのライブラリ導入・シリアル受信の基本動作が確認されていること</li>
+        </ul>
+        <p style="margin-top:6px; font-size:12px; color:#6d28d9;"><strong>判定者：佐藤（PL）・此上（品質管理）</strong>　未通過の場合：翌週前半（7週月火）で修正</p>
+      </div>
+    </div>
+
+    <div class="cp-row">
+      <div class="cp-dot">CP3</div>
+      <div class="cp-content">
+        <div class="cp-week">第7週水曜（2026-05-15）</div>
+        <div class="cp-title">◆ SPIプロトタイプ通信動作確認ゲート</div>
+        <ul class="cp-items">
+          <li>✅ サーバーArduino → 楽器Arduino1台でのSPIハンドシェイクが成功すること</li>
+          <li>✅ BPMクロック信号が楽器Arduino側で受信できていること（シリアルモニタ確認）</li>
+          <li>✅ 楽器Arduino → サーバーへの音データ割り込み送信が1回以上成功していること</li>
+          <li>✅ チェックサムエラー検出が動作していること</li>
+        </ul>
+        <p style="margin-top:6px; font-size:12px; color:#6d28d9;"><strong>判定者：藤本（監修）</strong>　未通過の場合：7週木金でデバッグ・8週バッファ日を使用</p>
+      </div>
+    </div>
+
+    <div class="cp-row">
+      <div class="cp-dot">CP4</div>
+      <div class="cp-content">
+        <div class="cp-week">第8週末（2026-05-23）</div>
+        <div class="cp-title">◆ 単体テスト完了確認ゲート</div>
+        <ul class="cp-items">
+          <li>✅ サーバーArduino単体：起動シーケンス・SPI通信・BPM管理・シリアル送信が各単体で動作すること</li>
+          <li>✅ 楽器Arduino単体：圧力センサ読み取り・NoteOn/NoteOff判定・SoundData生成・SPI送信が動作すること</li>
+          <li>✅ Processingアプリ単体：シリアル受信・パース・音声合成・エンベロープ・エフェクト・出力が動作すること</li>
+          <li>✅ 各担当PM側メンバーによるコードレビューが完了していること</li>
+        </ul>
+        <p style="margin-top:6px; font-size:12px; color:#6d28d9;"><strong>判定者：此上（品質管理）</strong>　未通過の場合：10週バッファで対応</p>
+      </div>
+    </div>
+
+    <div class="cp-row">
+      <div class="cp-dot">CP5</div>
+      <div class="cp-content">
+        <div class="cp-week">第9週末（2026-05-30）</div>
+        <div class="cp-title">◆ システムテスト完了確認ゲート</div>
+        <ul class="cp-items">
+          <li>✅ かえるの歌が5台全てで最初から最後まで演奏できること（1回以上の通し確認）</li>
+          <li>✅ 拍手BPM変更機能が動作すること（デモ環境で確認）</li>
+          <li>✅ カエル人形による手動演奏機能が4台全てで動作すること</li>
+          <li>✅ 1楽器のSPI切断時にフェイルセーフが発動し、残り3楽器で演奏継続できること</li>
+          <li>✅ 音声レイテンシが許容範囲内（200ms以内）であること</li>
+          <li>✅ 30分以上の連続稼働でクラッシュしないこと</li>
+        </ul>
+        <p style="margin-top:6px; font-size:12px; color:#6d28d9;"><strong>判定者：佐藤（PL）・此上（品質管理）</strong>　未通過の場合：10週バッファで緊急対応</p>
+      </div>
+    </div>
+
+    <div class="cp-row">
+      <div class="cp-dot passed">CP6</div>
+      <div class="cp-content passed">
+        <div class="cp-week">第10週末（2026-06-06）</div>
+        <div class="cp-title">◆ デモリハーサル最終確認ゲート（デモ直前）</div>
+        <ul class="cp-items">
+          <li>✅ デモシナリオ通りに演奏が完遂できること（リハーサル1回以上）</li>
+          <li>✅ 機材セットアップ（輸送・配線）が10分以内で完了できること</li>
+          <li>✅ 観客への説明・操作説明が準備されていること</li>
+          <li>✅ 緊急時（SPI断線など）の対応手順が全員に周知されていること</li>
+        </ul>
+        <p style="margin-top:6px; font-size:12px; color:#1a6b3c;"><strong>判定者：佐藤（PL）</strong>　未通過の場合：デモ当日の予備時間で最終修正</p>
+      </div>
+    </div>
+  </div>
+
+  <h2>4.4 体調不良・作業停止時のリスク対応</h2>
+  <div class="warn">
+    <strong>⚠ 開発側3名はクリティカルパスに張り付いており、1名の離脱がスケジュールに直結する。</strong>以下のルールを必ず徹底すること。
+  </div>
+  <div class="card">
+    <h3>体制ルール</h3>
+    <ol>
+      <li><strong>当日朝8時までに連絡</strong>：体調不良で当日作業不能の場合、佐藤（PL）にSlack/LINEで連絡する。</li>
+      <li><strong>バックアップ担当が即日引継ぎ</strong>：表6の「バックアップ」列に記載された担当者が当日中に引き継ぐ。</li>
+      <li><strong>2日以上連続離脱の場合</strong>：佐藤・藤本が残タスクを再配分し、スケジュールを再調整する（WBS更新）。</li>
+      <li><strong>3日以上の場合</strong>：10週バッファを前倒し投入して対応。ただしCP5（システムテスト完了）の期限は厳守。</li>
+    </ol>
+
+    <h3 style="margin-top:16px;">引継ぎを容易にするための義務事項</h3>
+    <ul>
+      <li>各実装タスクは<strong>「今日どこまで実装したか」を毎日コミットコメントに記載</strong>する（例：<code>[WBS:212] SPI初期化まで完了・ハンドシェイク未着手</code>）</li>
+      <li>コード内に<strong>TODO / FIXME コメント</strong>を残し、未完了部分を明示する</li>
+      <li>週次ミーティング（毎週月曜）で進捗を口頭共有し、バックアップ担当が作業内容を理解した状態を維持する</li>
+      <li>重要な設計判断（閾値・ピン番号など）は<strong>コード内コメントに理由とともに記載</strong>する</li>
+    </ul>
+
+    <h3 style="margin-top:16px;">バックアップ担当リスク評価</h3>
+    <table class="backup-table">
+      <thead><tr><th>離脱シナリオ</th><th>代替担当</th><th>影響度</th><th>対応策</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>大菅が7週（SPI実装中）に離脱</td>
+          <td>青木（バックアップ）</td>
+          <td class="risk-high">高：クリティカルパス直撃</td>
+          <td>青木が223の後にa212を優先引継ぎ。此上がProcessingサポートへ移行。10週バッファを前倒し</td>
+        </tr>
+        <tr>
+          <td>青木が7週（楽器Arduino実装中）に離脱</td>
+          <td>大菅（バックアップ）</td>
+          <td class="risk-high">高：クリティカルパス直撃</td>
+          <td>大菅が213の後にa222/223を優先引継ぎ。SPIバス配線（231）を8週頭に後ろ倒し</td>
+        </tr>
+        <tr>
+          <td>新保が実装中に離脱</td>
+          <td>此上（バックアップ）</td>
+          <td class="risk-med">中：クリティカルでないが音声品質に影響</td>
+          <td>此上がProcessingレビュー知識を活かして241/242を引継ぎ。音色チューニング（333）は10週バッファへ</td>
+        </tr>
+        <tr>
+          <td>佐藤が5週（設計中）に離脱</td>
+          <td>藤本（バックアップ）</td>
+          <td class="risk-med">中：意思決定が遅延</td>
+          <td>藤本がPL代行として未確定事項を決定。開発側3名の作業は並行継続（121/122/132は影響なし）</td>
+        </tr>
+        <tr>
+          <td>此上がシステムテスト中に離脱</td>
+          <td>藤本（バックアップ）</td>
+          <td class="risk-med">中：テスト計画の引継ぎが必要</td>
+          <td>藤本がテスト計画書を元にCP5の判定を実施。品質基準は本設計書の非機能要件で代替</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>4.5 週次ミーティング・定例確認事項</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>タイミング</th><th>内容</th><th>参加者</th><th>所要時間</th></tr></thead>
+      <tbody>
+        <tr><td>毎週月曜</td><td>週次進捗報告：前週完了タスク・今週予定・ブロッカーの共有</td><td>全員</td><td>15〜30分</td></tr>
+        <tr><td>毎週木曜</td><td>週中間チェック：クリティカルパスの進捗確認・バックアップ担当への状況共有</td><td>全員（非同期可）</td><td>10分</td></tr>
+        <tr><td>CP直前</td><td>チェックポイント判定：通過条件の確認・判定者による承認</td><td>判定者 + 主担当</td><td>30分</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===== 非機能要件 ===== -->
+<section id="nonfunc">
+  <h1>5. 非機能要件・標準化ルール</h1>
+  <p class="section-meta">性能・安定性・保守性・開発標準</p>
+
+  <h2>5.1 非機能要件一覧</h2>
+  <table class="req-table">
+    <thead><tr><th>カテゴリ</th><th>要件名</th><th>目標値</th><th>測定方法</th><th>確認CP</th></tr></thead>
+    <tbody>
+      <tr><td>性能</td><td>音声レイテンシ</td><td>受信から発音まで200ms以内（暫定）</td><td>シリアル受信タイムスタンプ vs 実際の発音時刻</td><td>CP5</td></tr>
+      <tr><td>性能</td><td>BPM精度</td><td>拍手BPM検出誤差±5%以内</td><td>メトロノームに合わせた拍手でBPMずれを計測</td><td>CP5</td></tr>
+      <tr><td>性能</td><td>SPI通信サイクル</td><td>1 BPMクロック周期内に全4楽器とのSPIトランザクション完了</td><td>オシロスコープでCS信号・クロックを観測</td><td>CP3</td></tr>
+      <tr><td>性能</td><td>圧力センサ応答</td><td>人形設置から発音開始まで100ms以内</td><td>設置タイムスタンプ vs 音声出力タイムスタンプ</td><td>CP5</td></tr>
+      <tr><td>安定性</td><td>連続稼働</td><td>30分以上クラッシュなし</td><td>リハーサル時の通し演奏で確認</td><td>CP5</td></tr>
+      <tr><td>安定性</td><td>フェイルセーフ</td><td>1楽器障害時も残り3楽器で演奏継続</td><td>意図的にSPI切断して動作確認</td><td>CP5</td></tr>
+      <tr><td>保守性</td><td>コーディング規約</td><td>Arduino: C++11準拠、Processing: PDE標準スタイル</td><td>コードレビュー（CP2,CP4）</td><td>CP4</td></tr>
+      <tr><td>保守性</td><td>コメント・ドキュメント</td><td>全WBSタスクの進捗をコミットコメントで追跡可能であること</td><td>gitログ確認</td><td>毎週</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5.2 実行環境・制約</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>項目</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr><td>Arduinoボード</td><td>Arduino Uno R3（または互換機）× 5台</td></tr>
+        <tr><td>Arduino IDE</td><td>Arduino IDE 2.x（C++11準拠）</td></tr>
+        <tr><td>PC OS</td><td>Windows 10以上 / macOS 12以上</td></tr>
+        <tr><td>Processingバージョン</td><td>Processing 4.x</td></tr>
+        <tr><td>音声ライブラリ</td><td>Minim（試用後確定）</td></tr>
+        <tr><td>通信ボーレート</td><td>115200 bps（USBシリアル）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>5.3 標準化ルール</h2>
+  <div class="card">
+    <h3>命名規約</h3>
+    <table>
+      <thead><tr><th>対象</th><th>規約</th><th>例</th></tr></thead>
+      <tbody>
+        <tr><td>変数・関数（Arduino C++）</td><td>snake_case</td><td><code>current_bpm</code>, <code>send_sound_data()</code></td></tr>
+        <tr><td>構造体・クラス（Arduino C++）</td><td>PascalCase</td><td><code>SoundData</code>, <code>InstrumentState</code></td></tr>
+        <tr><td>定数・マクロ</td><td>UPPER_SNAKE_CASE</td><td><code>MAX_ERROR_COUNT</code>, <code>DEFAULT_BPM</code></td></tr>
+        <tr><td>Processingクラス</td><td>PascalCase</td><td><code>AdditiveSynth</code>, <code>SerialParser</code></td></tr>
+        <tr><td>Processingメソッド</td><td>camelCase</td><td><code>parseBytes()</code>, <code>applyEnvelope()</code></td></tr>
+        <tr><td>ブランチ名（Git）</td><td>feature/[wbs-id]-[機能名]</td><td><code>feature/212-spi-master</code></td></tr>
+        <tr><td>コミットメッセージ</td><td>[WBS:XXX] 変更内容</td><td><code>[WBS:212] SPI初期化まで完了</code></td></tr>
+      </tbody>
+    </table>
+    <div class="note" style="margin-top:12px;">
+      <strong>PR（プルリクエスト）ルール：</strong>mainブランチへの直プッシュ禁止。PRには必ずPM側メンバー1名のレビュー承認が必要。
+    </div>
+  </div>
+</section>
+
+<!-- ===== 未確定事項 ===== -->
+<section id="issues">
+  <h1>6. 未確定事項・課題管理</h1>
+  <p class="section-meta">設計時に決定した事項と未解決の事項</p>
+
+  <h2>6.1 本設計書で決定した事項</h2>
+  <div class="note">以下の事項は本設計書にて決定として記載している。CP1（設計レビュー）でチーム全員が確認・承認すること。</div>
+  <table>
+    <thead><tr><th>項目</th><th>決定内容</th><th>確認責任者</th></tr></thead>
+    <tbody>
+      <tr><td>楽曲データ管理主体</td><td>サーバーArduinoのPROGMEMに格納</td><td>佐藤</td></tr>
+      <tr><td>SoundData pitchフィールド</td><td>MIDIノート番号（0〜127）</td><td>佐藤・大菅</td></tr>
+      <tr><td>SoundData 各フィールドのバイト数</td><td>各1バイト・合計4バイト固定長</td><td>大菅・青木</td></tr>
+      <tr><td>起動ハンドシェイク タイムアウト/リトライ</td><td>タイムアウト2秒・リトライ3回</td><td>大菅</td></tr>
+      <tr><td>NoteOff通知方式</td><td>duration=0 の SoundData を送信</td><td>青木・大菅</td></tr>
+      <tr><td>かえるの歌との共存方式</td><td>割り込み方式（手動演奏時に自動演奏をミュート）</td><td>佐藤</td></tr>
+      <tr><td>演奏終了後の動作</td><td>ループ（曲末から先頭に戻り繰り返す）</td><td>佐藤</td></tr>
+      <tr><td>フェイルセーフ後の復帰処理</td><td>電源再投入まで無音継続（復帰なし）</td><td>佐藤</td></tr>
+      <tr><td>Processingハンドシェイク</td><td>なし（Processing起動後に自動受信開始）</td><td>新保</td></tr>
+      <tr><td>CSピン割り当て（暫定）</td><td>楽器1:D4 / 楽器2:D5 / 楽器3:D6 / 楽器4:D7</td><td>青木・佐藤</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.2 未確定事項（要対応）</h2>
+  <div class="todo"><strong>⚠ 以下の事項はまだ未解決。CP1（5週末）までに解決を目指すこと。</strong></div>
+  <table>
+    <thead><tr><th>項目</th><th>状況</th><th>対応方針</th><th>優先度</th><th>期限</th><th>担当</th></tr></thead>
+    <tbody>
+      <tr><td>マイクモジュールの選定</td><td>候補：MAX4466（未確定）</td><td>WBS:122 で実機検証後決定</td><td><span class="badge badge-med">★★☆</span></td><td>6週末</td><td>青木</td></tr>
+      <tr><td>圧力センサ閾値の具体値</td><td>実機調整要</td><td>WBS:332 で組み立て後に実測して決定</td><td><span class="badge badge-med">★★☆</span></td><td>9週</td><td>青木</td></tr>
+      <tr><td>Processingの音声ライブラリ選定</td><td>候補：Minim（試用後決定）</td><td>WBS:132 で試用・バッファ管理確認後決定</td><td><span class="badge badge-med">★★☆</span></td><td>5週末</td><td>新保</td></tr>
+      <tr><td>許容レイテンシの目標値</td><td>200ms以内（暫定）</td><td>WBS:241 でバッファサイズ調整時に実測して確定</td><td><span class="badge badge-med">★★☆</span></td><td>8週</td><td>新保・此上</td></tr>
+      <tr><td>音色定義（倍音構成テーブル）</td><td>スペクトル解析待ち</td><td>WBS:242 開始前に各楽器の実音スペクトル解析を実施</td><td><span class="badge badge-low">★☆☆</span></td><td>7週</td><td>新保・藤本（監修）</td></tr>
+      <tr><td>拍手BPM検出の精度・レイテンシ目標</td><td>未検討</td><td>デモ後でも可。実装後に目標値を設定</td><td><span class="badge badge-low">★☆☆</span></td><td>デモ後</td><td>大菅・此上（監修）</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.3 改訂履歴</h2>
+  <table>
+    <thead><tr><th>版数</th><th>日付</th><th>改訂内容</th><th>改訂者</th></tr></thead>
+    <tbody>
+      <tr><td>v1.0</td><td>2026-04-23</td><td>初版作成（基本設計・詳細設計・担当割り振り）</td><td>設計チーム</td></tr>
+      <tr><td>v1.1</td><td>2026-04-23</td><td>メンバー名更新・ガントチャート追加・チェックポイント追加・体調不良対応バックアップ体制追加</td><td>設計チーム</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<script>
+  function show(id) {
+    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    const navEl = document.getElementById('nav-' + id);
+    if (navEl) navEl.classList.add('active');
+    window.scrollTo(0, 0);
+    return false;
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('nav-cover').classList.add('active');
+  });
+</script>
+</body>
+</html>
