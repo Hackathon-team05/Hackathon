@@ -1,0 +1,43 @@
+<h1>6. 未確定事項・課題管理</h1>
+  <p class="section-meta">設計時に決定した事項と未解決の事項</p>
+
+  <h2>6.1 本設計書で決定した事項</h2>
+  <div class="note">以下の事項は本設計書にて決定として記載している。CP1（設計レビュー）でチーム全員が確認・承認すること。</div>
+  <table>
+    <thead><tr><th>項目</th><th>決定内容</th><th>確認責任者</th></tr></thead>
+    <tbody>
+      <tr><td>楽曲データ管理主体</td><td>サーバーArduinoのPROGMEMに格納</td><td>佐藤</td></tr>
+      <tr><td>SoundData pitchフィールド</td><td>MIDIノート番号（0〜127）</td><td>佐藤・大菅</td></tr>
+      <tr><td>SoundData 各フィールドのバイト数</td><td>各1バイト・合計4バイト固定長</td><td>大菅・青木</td></tr>
+      <tr><td>起動ハンドシェイク タイムアウト/リトライ</td><td>タイムアウト2秒・リトライ3回</td><td>大菅</td></tr>
+      <tr><td>NoteOff通知方式</td><td>duration=0 の SoundData を送信</td><td>青木・大菅</td></tr>
+      <tr><td>かえるの歌との共存方式</td><td>割り込み方式（手動演奏時に自動演奏をミュート）</td><td>佐藤</td></tr>
+      <tr><td>演奏終了後の動作</td><td>ループ（曲末から先頭に戻り繰り返す）</td><td>佐藤</td></tr>
+      <tr><td>フェイルセーフ後の復帰処理</td><td>電源再投入まで無音継続（復帰なし）</td><td>佐藤</td></tr>
+      <tr><td>Processingハンドシェイク</td><td>なし（Processing起動後に自動受信開始）</td><td>新保</td></tr>
+      <tr><td>CSピン割り当て（暫定）</td><td>楽器1:D4 / 楽器2:D5 / 楽器3:D6 / 楽器4:D7</td><td>青木・佐藤</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.2 未確定事項（要対応）</h2>
+  <div class="todo"><strong>⚠ 以下の事項はまだ未解決。CP1（5週末）までに解決を目指すこと。</strong></div>
+  <table>
+    <thead><tr><th>項目</th><th>状況</th><th>対応方針</th><th>優先度</th><th>期限</th><th>担当</th></tr></thead>
+    <tbody>
+      <tr><td>マイクモジュールの選定</td><td>候補：MAX4466（未確定）</td><td>WBS:122 で実機検証後決定</td><td><span class="badge badge-med">★★☆</span></td><td>6週末</td><td>青木</td></tr>
+      <tr><td>圧力センサ閾値の具体値</td><td>実機調整要</td><td>WBS:332 で組み立て後に実測して決定</td><td><span class="badge badge-med">★★☆</span></td><td>9週</td><td>青木</td></tr>
+      <tr><td>Processingの音声ライブラリ選定</td><td>候補：Minim（試用後決定）</td><td>WBS:132 で試用・バッファ管理確認後決定</td><td><span class="badge badge-med">★★☆</span></td><td>5週末</td><td>新保</td></tr>
+      <tr><td>許容レイテンシの目標値</td><td>200ms以内（暫定）</td><td>WBS:241 でバッファサイズ調整時に実測して確定</td><td><span class="badge badge-med">★★☆</span></td><td>8週</td><td>新保・此上</td></tr>
+      <tr><td>音色定義（倍音構成テーブル）</td><td>スペクトル解析待ち</td><td>WBS:242 開始前に各楽器の実音スペクトル解析を実施</td><td><span class="badge badge-low">★☆☆</span></td><td>7週</td><td>新保・藤本（監修）</td></tr>
+      <tr><td>拍手BPM検出の精度・レイテンシ目標</td><td>未検討</td><td>デモ後でも可。実装後に目標値を設定</td><td><span class="badge badge-low">★☆☆</span></td><td>デモ後</td><td>大菅・此上（監修）</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6.3 改訂履歴</h2>
+  <table>
+    <thead><tr><th>版数</th><th>日付</th><th>改訂内容</th><th>改訂者</th></tr></thead>
+    <tbody>
+      <tr><td>v1.0</td><td>2026-04-23</td><td>初版作成（基本設計・詳細設計・担当割り振り）</td><td>設計チーム</td></tr>
+      <tr><td>v1.1</td><td>2026-04-23</td><td>メンバー名更新・ガントチャート追加・チェックポイント追加・体調不良対応バックアップ体制追加</td><td>設計チーム</td></tr>
+    </tbody>
+  </table>

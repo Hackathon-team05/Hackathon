@@ -1,0 +1,420 @@
+<h1>2. 詳細設計（内部設計）</h1>
+  <p class="section-meta">開発者視点で「どのロジックで実現するか（How）」を定義する</p>
+
+  <h2>2.1 PBS対応表（機能→成果物マッピング）</h2>
+  <table>
+    <thead><tr><th>機能ID</th><th>機能名</th><th>対応PBS成果物（モジュール）</th><th>WBS ID</th></tr></thead>
+    <tbody>
+      <tr><td>F1.1</td><td>起動シーケンス</td><td>startup_sequence.ino / 起動スイッチ</td><td>212</td></tr>
+      <tr><td>F1.2</td><td>BPM管理</td><td>bpm_manager.ino / マイクモジュール</td><td>213, 214</td></tr>
+      <tr><td>F1.3</td><td>楽曲データ管理</td><td>song_data.h（PROGMEM）</td><td>213</td></tr>
+      <tr><td>F1.4</td><td>演奏終了・停止</td><td>playback_ctrl.ino</td><td>212, 213</td></tr>
+      <tr><td>F2.1</td><td>SPI通信</td><td>spi_master.ino / spi_slave.ino / SPIバス配線</td><td>212, 223, 231</td></tr>
+      <tr><td>F2.2</td><td>USBシリアル通信</td><td>serial_tx.ino / USBケーブル</td><td>214</td></tr>
+      <tr><td>F3.1</td><td>圧力センサ処理</td><td>sensor.ino / 圧力センサ・カエル人形</td><td>222</td></tr>
+      <tr><td>F3.2</td><td>マイク入力</td><td>mic_input.ino / マイクモジュール</td><td>214</td></tr>
+      <tr><td>F4.1</td><td>シリアルパース</td><td>SerialParser.pde</td><td>241</td></tr>
+      <tr><td>F4.2</td><td>加算合成</td><td>AdditiveSynth.pde</td><td>242</td></tr>
+      <tr><td>F4.3</td><td>エンベロープ処理</td><td>Envelope.pde</td><td>243</td></tr>
+      <tr><td>F4.4</td><td>エフェクト処理</td><td>Effects.pde</td><td>243</td></tr>
+      <tr><td>F4.5</td><td>音声出力</td><td>AudioOutput.pde / PC</td><td>241</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888;">▲ 表3: FBS-PBS対応表</p>
+
+  <h2>2.2 ファームウェアアーキテクチャ</h2>
+  <h3>2.2.1 サーバーArduinoモジュール構成（図4）</h3>
+  <div class="mermaid-wrap">
+    <div class="cssd">
+      <div class="sg" style="border-color:#2c3e50;">
+        <div class="sg-t" style="background:#ecf0f1;color:#2c3e50;">サーバーArduinoファームウェア</div>
+        <div class="fccol" style="gap:6px;">
+          <span class="nd drk" style="padding:7px 24px;">main loop()</span>
+          <div style="font-size:11px;color:#888;text-align:center;">↓ 呼び出し</div>
+          <div class="fcrow" style="gap:8px;width:100%;">
+            <div class="fcbr">
+              <span class="nd" style="font-size:11px;text-align:center;">startup_sequence<br><small>起動・ハンドシェイク</small></span>
+              <div class="fcvl"></div>
+              <span class="nd skp" style="font-size:11px;">instrument_state<br><small>楽器状態テーブル</small></span>
+            </div>
+            <div class="fcbr">
+              <span class="nd srv" style="font-size:11px;text-align:center;">spi_master<br><small>SPIマスタ・BPM送信<br>音データ受信・チェックサム</small></span>
+              <div class="fcvl"></div>
+              <div style="display:flex;gap:4px;">
+                <span class="nd skp" style="font-size:11px;">instrument_state</span>
+                <span class="nd grn" style="font-size:11px;">serial_tx<br><small>音データ転送</small></span>
+              </div>
+            </div>
+            <div class="fcbr">
+              <span class="nd" style="font-size:11px;text-align:center;">bpm_manager<br><small>BPM管理<br>リングバッファ</small></span>
+              <div class="fcvl"></div>
+              <span class="nd" style="font-size:11px;background:#fef9e7;border-color:#e67e22;">song_data (PROGMEM)<br><small>かえるの歌音符配列</small></span>
+            </div>
+            <div class="fcbr">
+              <span class="nd red" style="font-size:11px;">mic_input<br><small>拍手ピーク検出</small></span>
+              <div class="fcvl"></div>
+              <span class="nd" style="font-size:11px;">bpm_manager<br><small style="color:#888;">← 検出値送信</small></span>
+            </div>
+            <div class="fcbr">
+              <span class="nd" style="font-size:11px;">playback_ctrl<br><small>演奏タイミング<br>ループ管理</small></span>
+              <div class="fcvl"></div>
+              <span class="nd" style="font-size:11px;background:#fef9e7;border-color:#e67e22;">song_data (PROGMEM)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図4: サーバーArduinoモジュール構成</p>
+
+  <h3>2.2.2 楽器Arduinoモジュール構成（図5）</h3>
+  <div class="mermaid-wrap">
+    <div class="cssd">
+      <div class="sg" style="border-color:#8e44ad;">
+        <div class="sg-t" style="background:#f3e8ff;color:#8e44ad;">楽器Arduinoファームウェア（×4）</div>
+        <div class="fccol" style="gap:6px;">
+          <span class="nd drk" style="padding:7px 24px;">main loop()</span>
+          <div style="font-size:11px;color:#888;">↓</div>
+          <div class="fcrow" style="gap:12px;">
+            <div class="fcbr">
+              <span class="nd red" style="font-size:11px;text-align:center;">sensor.ino<br><small>圧力センサポーリング<br>NoteOn/NoteOff判定</small></span>
+              <div class="fcvl"></div>
+              <span class="nd" style="font-size:11px;text-align:center;">sound_data_gen<br><small>SoundData構造体生成</small></span>
+              <div class="fcvl"></div>
+              <span class="nd srv" style="font-size:11px;text-align:center;">spi_slave<br><small>SPIスレーブ<br>BPMクロック受信<br>割り込み音データ送信</small></span>
+              <div class="fcvl"></div>
+              <span class="nd man" style="font-size:11px;text-align:center;">mode_ctrl<br><small>自動演奏/手動演奏切替</small></span>
+              <div style="font-size:10px;color:#888;">↓ フィードバック</div>
+              <span class="nd" style="font-size:11px;text-align:center;">sound_data_gen<br><small style="color:#888;">← モード反映</small></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図5: 楽器Arduinoモジュール構成</p>
+
+  <h2>2.3 シーケンス図</h2>
+  <h3>2.3.1 起動シーケンス（図6）</h3>
+  <div class="mermaid-wrap">
+    <div class="cssd" style="overflow-x:auto;">
+      <table class="sq">
+        <tr class="sqh">
+          <th style="width:12%;">スイッチ</th>
+          <th style="width:28%;">サーバーArduino</th>
+          <th style="width:28%;">楽器Arduino×4</th>
+          <th style="width:32%;">Processing(PC)</th>
+        </tr>
+        <tr>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>電源ON</td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="sqsl">自己初期化（PROGMEM展開・BPM設定・SPI初期化）</span></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr class="lp"><td colspan="4">　loop: CS送信（楽器1〜4順次）</td></tr>
+        <tr>
+          <td></td>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>CSアサート（ハンドシェイク要求）</td>
+          <td></td>
+        </tr>
+        <tr class="at"><td colspan="4">　　alt: 応答あり（2秒以内）</td></tr>
+        <tr>
+          <td></td>
+          <td>ハンドシェイク応答 <span style="color:#27ae60;font-size:12px;">←←←</span></td>
+          <td style="text-align:right;"><span style="color:#27ae60;font-size:12px;">←</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="sqsl">アクティブ登録</span></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr class="ae"><td colspan="4">　　else: タイムアウト（3回リトライ後）</td></tr>
+        <tr>
+          <td></td>
+          <td><span class="sqsl">スキップ登録（無音パート）</span></td>
+          <td></td>
+          <td></td>
+        </tr>
+        <tr class="ae"><td colspan="4">　end</td></tr>
+        <tr class="ae"><td colspan="4">　end loop</td></tr>
+        <tr>
+          <td></td>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>BPMクロック一斉送信開始</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td></td>
+          <td>音データシリアル送信開始</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="sqsl">かえるの歌 自動演奏ループ開始</span></td>
+          <td></td>
+          <td></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図6: 起動シーケンス図</p>
+
+  <h3>2.3.2 手動演奏シーケンス（図7）</h3>
+  <div class="mermaid-wrap">
+    <div class="cssd" style="overflow-x:auto;">
+      <table class="sq">
+        <tr class="sqh">
+          <th style="width:14%;">圧力センサ</th>
+          <th style="width:26%;">楽器Arduino</th>
+          <th style="width:28%;">サーバーArduino</th>
+          <th style="width:32%;">Processing</th>
+        </tr>
+        <tr>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>アナログ値 &gt; 閾値（人形設置）</td>
+          <td></td><td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="sqsl">NoteOn検出・SoundData生成
+（duration=255, velocity=127）</span></td>
+          <td></td><td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>SPI割り込み送信（SoundData 4byte）</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td><td></td>
+          <td><span class="sqsl">チェックサム検証OK
+該当パート→手動モード（自動ミュート）</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td><td></td>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>シリアル転送（SoundData 4byte）</td>
+        </tr>
+        <tr>
+          <td></td><td></td><td></td>
+          <td><span class="sqsl">パース → 加算合成 → ADSR → エフェクト → 音声出力</span></td>
+        </tr>
+        <tr style="background:#f9f9f9;"><td colspan="4" style="padding:2px 8px;font-size:10px;color:#aaa;">—— NoteOff ——</td></tr>
+        <tr>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>アナログ値 &lt; 閾値（人形除去）</td>
+          <td></td><td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td><span class="sqsl">NoteOff検出・SoundData生成
+（duration=0）</span></td>
+          <td></td><td></td>
+        </tr>
+        <tr>
+          <td></td>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>SPI割り込み送信（NoteOff SoundData）</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td><td></td>
+          <td><span class="sqsl">該当パート → 自動演奏モード復帰</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td></td><td></td>
+          <td style="text-align:right;"><span style="color:#2980b9;font-size:12px;">→→→</span></td>
+          <td>シリアル転送（NoteOff SoundData）</td>
+        </tr>
+        <tr>
+          <td></td><td></td><td></td>
+          <td><span class="sqsl">Releaseフェーズ開始 → 減衰停止</span></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図7: 手動演奏シーケンス図</p>
+
+  <h2>2.4 Processing クラス構成（図8）</h2>
+  <div class="mermaid-wrap">
+    <div class="cssd">
+      <div class="clg">
+        <div class="clb">
+          <div class="clbh">SerialParser</div>
+          <div class="clbs">
+            <div class="clba"><span class="vi">-</span> Serial port</div>
+            <div class="clba"><span class="vi">-</span> bytes buffer</div>
+          </div>
+          <div class="clbs">
+            <div class="clba">+ void update()</div>
+            <div class="clba">+ SoundData parse(bytes raw)</div>
+          </div>
+        </div>
+        <div class="clb">
+          <div class="clbh">SoundData</div>
+          <div class="clbs">
+            <div class="clba">+ int instrument_id</div>
+            <div class="clba">+ int pitch</div>
+            <div class="clba">+ int duration</div>
+            <div class="clba">+ int velocity</div>
+          </div>
+        </div>
+        <div class="clb">
+          <div class="clbh">AdditiveSynth</div>
+          <div class="clbs">
+            <div class="clba"><span class="vi">-</span> HarmonicTableArray tables</div>
+            <div class="clba"><span class="vi">-</span> float sampleRate</div>
+          </div>
+          <div class="clbs">
+            <div class="clba">+ floatArray synthesize(SoundData sd, int n)</div>
+          </div>
+        </div>
+        <div class="clb">
+          <div class="clbh">HarmonicTable</div>
+          <div class="clbs">
+            <div class="clba">+ int instrument_id</div>
+            <div class="clba">+ floatArray amplitudes</div>
+            <div class="clba">+ intArray orders</div>
+          </div>
+        </div>
+        <div class="clb">
+          <div class="clbh">Envelope</div>
+          <div class="clbs">
+            <div class="clba"><span class="vi">-</span> float attack</div>
+            <div class="clba"><span class="vi">-</span> float decay</div>
+            <div class="clba"><span class="vi">-</span> float sustain</div>
+            <div class="clba"><span class="vi">-</span> float release</div>
+            <div class="clba"><span class="vi">-</span> int phase</div>
+          </div>
+          <div class="clbs">
+            <div class="clba">+ float apply(float sample, boolean noteOn)</div>
+          </div>
+        </div>
+        <div class="clb">
+          <div class="clbh">Effects</div>
+          <div class="clbs">
+            <div class="clba">+ float vibrato(float s, float time, float depth, float rate)</div>
+            <div class="clba">+ float reverb(float s, floatArray buf, int pos, float att)</div>
+          </div>
+        </div>
+        <div class="clb">
+          <div class="clbh">AudioOutput</div>
+          <div class="clbs">
+            <div class="clba"><span class="vi">-</span> int bufferSize</div>
+          </div>
+          <div class="clbs">
+            <div class="clba">+ void write(floatArray samples)</div>
+            <div class="clba">+ void flush()</div>
+          </div>
+        </div>
+      </div>
+      <table class="er-rel-table" style="font-size:11.5px;">
+        <thead><tr><th>クラスA</th><th style="text-align:center;">関係</th><th>クラスB</th><th>ラベル</th></tr></thead>
+        <tbody>
+          <tr><td class="er-ent">SerialParser</td><td style="text-align:center;">──▶</td><td class="er-ent">SoundData</td><td class="er-card">creates</td></tr>
+          <tr><td class="er-ent">AdditiveSynth</td><td style="text-align:center;">──▶</td><td class="er-ent">SoundData</td><td class="er-card">reads</td></tr>
+          <tr><td class="er-ent">AdditiveSynth</td><td style="text-align:center;">──▶</td><td class="er-ent">HarmonicTable</td><td class="er-card">references</td></tr>
+          <tr><td class="er-ent">AudioOutput</td><td style="text-align:center;">──▶</td><td class="er-ent">Effects</td><td class="er-card">applies</td></tr>
+          <tr><td class="er-ent">AudioOutput</td><td style="text-align:center;">──▶</td><td class="er-ent">Envelope</td><td class="er-card">applies</td></tr>
+          <tr><td class="er-ent">AudioOutput</td><td style="text-align:center;">──▶</td><td class="er-ent">AdditiveSynth</td><td class="er-card">calls</td></tr>
+          <tr><td class="er-ent">AudioOutput</td><td style="text-align:center;">──▶</td><td class="er-ent">SerialParser</td><td class="er-card">reads</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図8: Processing クラス構成図</p>
+
+  <h2>2.5 物理データ設計（SoundData構造体）</h2>
+  <table>
+    <thead><tr><th>フィールド名</th><th>型</th><th>バイト数</th><th>値域</th><th>説明</th></tr></thead>
+    <tbody>
+      <tr><td>instrument_id</td><td>uint8_t</td><td>1</td><td>0〜3</td><td>楽器番号（0:メロディ1, 1:メロディ2, 2:メロディ3, 3:リズム）</td></tr>
+      <tr><td>pitch</td><td>uint8_t</td><td>1</td><td>0〜127</td><td><span class="badge badge-done">決定：MIDIノート番号</span>（中央C=60）</td></tr>
+      <tr><td>duration</td><td>uint8_t</td><td>1</td><td>0〜255 / 0=NoteOff</td><td>音長（16分音符単位）。<strong>0: NoteOff通知</strong></td></tr>
+      <tr><td>velocity</td><td>uint8_t</td><td>1</td><td>0〜127</td><td>音の強さ（手動演奏時は127固定）</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888;">▲ 表4: SoundData構造体 物理設計（合計4バイト固定長）</p>
+
+  <h2>2.6 楽器パート 状態遷移図（図9）</h2>
+  <div class="mermaid-wrap">
+    <div class="cssd">
+      <table class="sttbl">
+        <thead><tr><th>遷移元</th><th style="text-align:center;">イベント / 条件</th><th>遷移先</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="sttag i">● 初期</span></td>
+            <td style="text-align:center;color:#888;font-size:11px;">（起動）</td>
+            <td><span class="sttag k">未接続</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag k">未接続</span></td>
+            <td style="text-align:center;font-size:11px;color:#1a6b3c;">ハンドシェイク成功</td>
+            <td><span class="sttag a">アクティブ（自動演奏）</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag k">未接続</span></td>
+            <td style="text-align:center;font-size:11px;color:#922b21;">タイムアウト / 3回失敗</td>
+            <td><span class="sttag k">スキップ（無音パート）</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag a">アクティブ（自動演奏）</span></td>
+            <td style="text-align:center;font-size:11px;color:#7d4e00;">NoteOn受信（人形設置）</td>
+            <td><span class="sttag m">アクティブ（手動演奏）</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag m">アクティブ（手動演奏）</span></td>
+            <td style="text-align:center;font-size:11px;color:#1a6b3c;">NoteOff受信（人形除去）</td>
+            <td><span class="sttag a">アクティブ（自動演奏）</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag a">アクティブ（自動演奏）</span></td>
+            <td style="text-align:center;font-size:11px;color:#922b21;">SPI通信エラー×3</td>
+            <td><span class="sttag f">フェイルセーフ（無音）</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag m">アクティブ（手動演奏）</span></td>
+            <td style="text-align:center;font-size:11px;color:#922b21;">SPI通信エラー×3</td>
+            <td><span class="sttag f">フェイルセーフ（無音）</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag f">フェイルセーフ（無音）</span></td>
+            <td style="text-align:center;font-size:11px;color:#555;">電源再投入</td>
+            <td><span class="sttag i">● 終了</span></td>
+          </tr>
+          <tr>
+            <td><span class="sttag k">スキップ（無音パート）</span></td>
+            <td style="text-align:center;font-size:11px;color:#555;">電源再投入</td>
+            <td><span class="sttag i">● 終了</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p style="font-size:12px; color:#888;">▲ 図9: 楽器パート 状態遷移図</p>
+
+  <h2>2.7 エラーハンドリング一覧</h2>
+  <table>
+    <thead><tr><th>エラー種別</th><th>検出条件</th><th>対処</th><th>復帰方法</th></tr></thead>
+    <tbody>
+      <tr><td>SPI通信エラー</td><td>チェックサム不一致が1楽器で3回連続</td><td>該当楽器からのデータ受信停止・無音継続</td><td>電源再投入（復帰なし）</td></tr>
+      <tr><td>ハンドシェイク失敗</td><td>起動時タイムアウト2秒・3回後も無応答</td><td>スキップ登録して演奏続行</td><td>電源再投入</td></tr>
+      <tr><td>シリアル切断</td><td>ProcessingがUSBシリアル切断検知</td><td>バッファ内サンプル出力完了後に停止</td><td>USB再接続</td></tr>
+      <tr><td>圧力センサ異常値</td><td>ポーリング値がADCフルスケール付近</td><td>閾値超過として扱い演奏継続</td><td>自動回復</td></tr>
+      <tr><td>マイクノイズ</td><td>テンポ検出値がリングバッファ平均±2σ外れ</td><td>外れ値として破棄、BPM更新なし</td><td>自動回復</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:12px; color:#888;">▲ 表5: エラーハンドリング一覧</p>
