@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Nav from "@/components/Nav";
+import MermaidInitializer from "@/components/MermaidInitializer";
 
 export const metadata: Metadata = {
   title: "Arduinoオーケストラ 設計書",
@@ -15,6 +16,7 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body>
+        <MermaidInitializer />
         <Nav />
         <main className="max-w-[1400px] mx-auto px-12 py-8 max-md:px-4 max-md:py-5">
           {children}
