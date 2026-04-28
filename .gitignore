@@ -21,3 +21,6 @@ processing/*/*.class
 
 # Arduino IDE v2
 .arduino15/
+
+# ローカルにのみ置く，基本設計などのディレクトリ
+local/
