@@ -101,19 +101,19 @@ sequenceDiagram
   participant PC as Processing
 
   PS->>INST: アナログ値 > 閾値（人形設置）
-  INST->>INST: NoteOn検出・SoundData生成（duration=255, velocity=127）
-  INST->>SRV: SPI割り込み送信（SoundData 4byte）
+  INST->>INST: NoteOn検出・SoundData生成（velocity=127）
+  INST->>SRV: SPI割り込み送信（SoundData 4byte, duration=255）
   SRV->>SRV: チェックサム検証OK・該当パート→手動モード（自動ミュート）
-  SRV->>PC: シリアル転送（SoundData 4byte）
+  SRV->>PC: シリアル転送（NoteOnフレーム type=0x01, SoundData 3byte）
   PC->>PC: パース → 加算合成 → ADSR → エフェクト → 音声出力
 
   Note over PS,PC: NoteOff
 
   PS->>INST: アナログ値 < 閾値（人形除去）
-  INST->>INST: NoteOff検出・SoundData生成（duration=0）
-  INST->>SRV: SPI割り込み送信（NoteOff SoundData）
-  SRV->>SRV: 該当パート → 自動演奏モード復帰
-  SRV->>PC: シリアル転送（NoteOff SoundData）
+  INST->>INST: NoteOff検出（duration=0 SoundData生成）
+  INST->>SRV: SPI割り込み送信（SoundData 4byte, duration=0）
+  SRV->>SRV: duration=0検出・該当パート → 自動演奏モード復帰
+  SRV->>PC: シリアル転送（NoteOffフレーム type=0x02, instrument_id 1byte）
   PC->>PC: Releaseフェーズ開始 → 減衰停止
     </pre>
   </div>
@@ -132,7 +132,6 @@ classDiagram
   class SoundData {
     +int instrument_id
     +int pitch
-    +int duration
     +int velocity
   }
   class AdditiveSynth {
@@ -180,11 +179,10 @@ classDiagram
     <tbody>
       <tr><td>instrument_id</td><td>uint8_t</td><td>1</td><td>0〜3</td><td>楽器番号（0:メロディ1, 1:メロディ2, 2:メロディ3, 3:リズム）</td></tr>
       <tr><td>pitch</td><td>uint8_t</td><td>1</td><td>0〜127</td><td><span class="badge badge-done">決定：MIDIノート番号</span>（中央C=60）</td></tr>
-      <tr><td>duration</td><td>uint8_t</td><td>1</td><td>0〜255 / 0=NoteOff</td><td>音長（16分音符単位）。<strong>0: NoteOff通知</strong></td></tr>
       <tr><td>velocity</td><td>uint8_t</td><td>1</td><td>0〜127</td><td>音の強さ（手動演奏時は127固定）</td></tr>
     </tbody>
   </table>
-  <p style="font-size:12px; color:#888;">▲ 表4: SoundData構造体 物理設計（合計4バイト固定長）</p>
+  <p style="font-size:12px; color:#888;">▲ 表4: SoundData構造体 物理設計（合計3バイト固定長）。USBシリアルはNoteOn/NoteOff分離フレーム方式。NoteOff通知はtype=0x02フレームで独立送信（instrument_id 1byte）。SPI層ではduration=0のSoundData 4byteでNoteOff通知し，サーバーがUSBフレームへ変換する。</p>
 
   <h2>2.6 楽器パート 状態遷移図（図9）</h2>
   <div class="mermaid-wrap">

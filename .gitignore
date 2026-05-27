@@ -24,3 +24,17 @@ processing/*/*.class
 
 # ローカルにのみ置く，基本設計などのディレクトリ
 local/
+
+# AIエージェント / 開発支援ツールのローカル設定
+.claude/
+.agents/
+.codex/
+.obsidian/
+.skill/
+
+# ローカルメモ・作業中ファイル
+wiki/
+docs/minutes-temp.md
+
+# ログ
+*.log

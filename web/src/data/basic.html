@@ -43,7 +43,7 @@ flowchart LR
       <tr><td>F2.2</td><td>通信</td><td>USBシリアル通信</td><td>SRV ↔ PC</td><td>音データをProcessingへ転送</td><td>115200 bps</td></tr>
       <tr><td>F3.1</td><td>センサ入力</td><td>圧力センサ処理</td><td>楽器Arduino</td><td>ポーリング・閾値判定・NoteOn/NoteOff生成・自動演奏との共存</td><td><span class="badge badge-done">決定：割り込み方式</span></td></tr>
       <tr><td>F3.2</td><td>センサ入力</td><td>マイク入力</td><td>サーバーArduino</td><td>拍手音ピーク検出 → BPM変更トリガ</td><td>移動平均でノイズ除去</td></tr>
-      <tr><td>F4.1</td><td>音声生成</td><td>シリアルパース</td><td>Processing</td><td>バイト列受信・SoundData構造体への変換</td><td>4バイト固定長</td></tr>
+      <tr><td>F4.1</td><td>音声生成</td><td>シリアルパース</td><td>Processing</td><td>共通フレーム受信・チェックサム検証・種別ごとのペイロード解析</td><td>NoteOn/NoteOff分離フレーム方式（NoteOn=0x01 3byte / NoteOff=0x02 1byte）</td></tr>
       <tr><td>F4.2</td><td>音声生成</td><td>加算合成</td><td>Processing</td><td>倍音構成テーブル参照・正弦波生成・全倍音加算</td><td>倍音構成はスペクトル解析後確定</td></tr>
       <tr><td>F4.3</td><td>音声生成</td><td>エンベロープ処理</td><td>Processing</td><td>Attack/Decay/Sustain/Releaseをサンプル単位で適用</td><td></td></tr>
       <tr><td>F4.4</td><td>音声生成</td><td>エフェクト処理</td><td>Processing</td><td>ビブラート → リバーブの順に適用</td><td></td></tr>
@@ -156,7 +156,7 @@ erDiagram
       <thead><tr><th>項目</th><th>仕様</th></tr></thead>
       <tbody>
         <tr><td>ボーレート</td><td>115200 bps</td></tr>
-        <tr><td>データ形式</td><td>SoundData 4バイト固定長をそのまま転送</td></tr>
+        <tr><td>データ形式</td><td>共通フレーム（start:0xFF / type / length / payload / checksum XOR）でラップして転送。NoteOn=0x01: SoundData 3byte / NoteOff=0x02: instrument_id 1byte / BPM通知=0x03: 1byte / フェイルセーフ=0x04: 1byte / 全停止=0x05: 0byte</td></tr>
         <tr><td>Processingハンドシェイク</td><td><span class="badge badge-done">決定：なし（自動受信開始）</span></td></tr>
       </tbody>
     </table>
