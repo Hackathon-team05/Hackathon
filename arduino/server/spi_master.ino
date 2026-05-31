@@ -1,11 +1,5 @@
 #include<SPI.h>
 
-const int CS_DEV1=D4;
-const int CS_DEV2=D5;
-const int CS_DEV3=D6;
-const int CS_DEV4=D7;
-const int CS_SYNC=D9;
-
 void spi_setup(){
     SPI.begin();
 
@@ -19,7 +13,35 @@ void spi_setup(){
     digitalWrite(CS_DEV2,HIGH);
     digitalWrite(CS_DEV3,HIGH);
     digitalWrite(CS_DEV4,HIGH);
-    digitalWrite(CS_SYNC,HIGH);
+    digitalWrite(CS_SYNC,LOW);
 };
 
+void spi_send(int dev,ControlCommand& cmd,InstrumentStatus& status){
+    if(dev<0||dev>=4){
+        return;
+    }
+    int dev_pin=dev_ctl[dev].cs_pin;
+    digitalWrite(dev_pin,LOW);
+    uint8_t* cmd_box=(uint8_t*)&cmd;
+    uint8_t* status_box=(uint8_t*)&status;
+    int cmd_len=sizeof(ControlCommand);
+    int status_len=sizeof(InstrumentStatus);
+    for(int i=0;i<cmd_len;i++){
+        status_box[i]=SPI.transfer(cmd_box[i]);
+    }
+    for(int i = cmd_len; i < status_len; i++){
+        status_box[i] = SPI.transfer(0x00);
+    }
+    digitalWrite(dev_pin,HIGH);
+    verification_status(dev,cmd,status);
+}
 
+void failsafe(int dev,ControlCommand& cmd,InstrumentStatus& status){
+    if(dev<0||dev>=4){
+        return;
+    }
+    dev_ctl[dev].failsafe=true;
+    generate_cmd(0x02,cmd);
+    spi_send(dev,cmd,status);
+    dev_ctl[dev].error_count=0;
+}
