@@ -57,7 +57,7 @@ void loop(){
         if(dev_ctl[i].failsafe){
             continue;
         }
-        generate_cmd(0x00,cmd);
+        generate_cmd(0x00,cmd);//定期的に圧力センサの監視
         spi_send(i, cmd, status);//定期的に圧力センサの監視
         handle_device_command(i, cmd);
     }

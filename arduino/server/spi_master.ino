@@ -29,9 +29,6 @@ void spi_send(int dev,ControlCommand& cmd,InstrumentStatus& status){
     for(int i=0;i<cmd_len;i++){
         status_box[i]=SPI.transfer(cmd_box[i]);
     }
-    for(int i = cmd_len; i < status_len; i++){
-        status_box[i] = SPI.transfer(0x00);
-    }
     digitalWrite(dev_pin,HIGH);
     verification_status(dev,cmd,status);
 }
