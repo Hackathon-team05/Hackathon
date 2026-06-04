@@ -5,7 +5,7 @@ void generate_cmd(int command,ControlCommand& cmd){
         cmd.sequence=tick_generate();
     }else{
         cmd.command_type=0x04;
-        cmd.payload=get_bpm();
+        cmd.payload=(uint16_t)get_bpm();
         cmd.sequence=tick_generate();
     }
     generate_checksum(cmd);
