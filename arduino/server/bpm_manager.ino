@@ -37,7 +37,7 @@ bool bpm_generate(unsigned long last_t){
         estimated_bpm = BPM_MAX;
     }
 
-    bpm =　bpm * (1 - SMOOTH_FACTOR) + estimated_bpm * SMOOTH_FACTOR;
+    bpm =bpm * (1 - SMOOTH_FACTOR) + estimated_bpm * SMOOTH_FACTOR;
     return true;
 }
 

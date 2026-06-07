@@ -1,5 +1,3 @@
-#include<SPI.h>
-
 void spi_setup(){
     SPI.begin();
 

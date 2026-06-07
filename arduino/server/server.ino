@@ -1,6 +1,8 @@
 // サーバーArduino
 // 役割: BPM管理・楽曲データ管理（PROGMEM）・SPI Master・マイク入力・シリアル送信
 
+#include<SPI.h>
+
 struct __attribute__((packed)) ControlCommand{
     uint8_t command_type;
     uint16_t payload;
@@ -41,6 +43,8 @@ int clap_count=0;
 const int CLAP_MAX=5;
 unsigned long clap_times[CLAP_MAX];
 const float SMOOTH_FACTOR=0.3;
+//tick管理
+int global_tick=0;
 
 
 struct DeviceStatus{
