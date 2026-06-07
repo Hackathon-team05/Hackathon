@@ -5,6 +5,7 @@ const int max_try=3;
 
 
 void boot_setup(){
+    Serial.begin(BAUD);
     spi_setup();
     default_bpm();
 };
