@@ -5,9 +5,6 @@ void mic_setup(){
 bool mic_read(){
     bool judge=false;
     unsigned long start_t=millis();
-    if(start_t-last_time<250){//インターバルチェック
-        return judge;
-    }
     value=analogRead(MIC_PIN);
     if(!win_full){
         mic_window[win_id] = value;
@@ -15,7 +12,7 @@ bool mic_read(){
         if (win_id == 0) {
             win_full = true;
         }
-        return 0;
+        return judge;
     }
     float sum=0;
     for(int i=0;i<WINDOW_SIZE;i++){
@@ -31,9 +28,30 @@ bool mic_read(){
     float sigma=sqrt(var/WINDOW_SIZE);
 
     float threshold=mean+PEAK_SIGMA_FACTOR*sigma;
-    if(value>threshold){
-        judge = bpm_generate(start_t);
-        last_time=start_t;
+    if(!peak_track&&value>threshold){
+        peak_track=true;
+        peak_max=value;
+        peak_time=start_t;
+        down_count=0;
+        return judge;
+    }else if(peak_track){
+        if(value>peak_max){
+            peak_max=value;
+            peak_time=start_t;
+            down_count=0;
+        }else{
+            down_count++;
+        }
+        if(down_count>=PEAK_DOWN_COUNT){
+            if(last_time==0||peak_time-last_time>=INTERVAL_TIME){//インターバルチェック
+                judge = bpm_generate(peak_time);
+                last_time=peak_time;
+            }
+            peak_track=false;
+            peak_time=0;
+            peak_max=0;
+            down_count=0;
+        }
         return judge;//returnすることで閾値以上の値を閾値設定バッファに入れない
     }
     mic_window[win_id] = value;
@@ -41,6 +59,5 @@ bool mic_read(){
     if (win_id == 0) {
         win_full = true;
     }
-    last_time=start_t;
     return judge;
 }
