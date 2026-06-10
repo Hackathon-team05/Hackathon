@@ -25,6 +25,8 @@ const int CS_DEV3=D6;
 const int CS_DEV4=D7;
 const int CS_SYNC=D9;
 const int MIC_PIN=A1;
+//コマンド生成
+uint8_t command_sequence = 0;
 //拍手検出
 uint16_t value=0;
 const int PEAK_SIGMA_FACTOR=2;
@@ -53,7 +55,9 @@ unsigned long clap_intervals[CLAP_MAX-1];
 unsigned long clap_sorted_intervals[CLAP_MAX-1];
 const float INTERVAL_OUTLIER_RATIO=0.3;
 //tick管理
-int global_tick=0;
+unsigned long global_tick=0;
+unsigned long last_tick_us=0;
+unsigned long tick_period_us=0;
 
 struct DeviceStatus{
     uint8_t cs_pin; //ピン番号
@@ -81,6 +85,7 @@ void setup(){
         }
     }
     mic_setup();
+    tick_setup();
 }
 
 void loop(){
@@ -104,5 +109,11 @@ void loop(){
             generate_cmd(0x04,cmd);
             spi_send(i, cmd, status);//BPM送信
         }
+    }
+
+    if(tick_generate()){//tick周期ごとにSYNC送信
+        digitalWrite(CS_SYNC,HIGH);
+        delayMicroseconds(10);
+        digitalWrite(CS_SYNC,LOW);
     }
 }
