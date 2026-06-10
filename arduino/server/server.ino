@@ -27,6 +27,7 @@ const int CS_SYNC=D9;
 const int MIC_PIN=A1;
 //拍手検出
 uint16_t value=0;
+const int interval_time=10;
 const int PEAK_SIGMA_FACTOR=2;
 const uint8_t WINDOW_SIZE=50;
 uint16_t mic_window[WINDOW_SIZE];
@@ -37,23 +38,14 @@ const int DEF_BPM=70;
 const int BPM_MIN=60;
 const int BPM_MAX=140;
 uint16_t bpm=70;
-unsigned long last_time=0;//前回の検出時間  
-int clap_count=0;//ピーク検出回数
-const int CLAP_MAX=5;//BPM計算に使う拍手の数
-unsigned long clap_times[CLAP_MAX];//拍手の時間を保管
-const float SMOOTH_FACTOR=0.3;//BPM変化の適用割合
-bool peak_track=false;
-uint16_t peak_max=0;
-unsigned long peak_time=0;
-uint8_t down_count=0;
-const uint8_t PEAK_DOWN_COUNT=3;
-const unsigned long INTERVAL_TIME=250;
-const uint8_t CLAP_INTERVAL_COUNT = CLAP_MAX-1;
-unsigned long clap_intervals[CLAP_MAX-1];
-unsigned long clap_sorted_intervals[CLAP_MAX-1];
-const float INTERVAL_OUTLIER_RATIO=0.3;
+unsigned long last_time=0;  
+int clap_count=0;
+const int CLAP_MAX=5;
+unsigned long clap_times[CLAP_MAX];
+const float SMOOTH_FACTOR=0.3;
 //tick管理
 int global_tick=0;
+
 
 struct DeviceStatus{
     uint8_t cs_pin; //ピン番号
@@ -80,7 +72,6 @@ void setup(){
             dev_ctl[i].failsafe=true;
         }
     }
-    mic_setup();
 }
 
 void loop(){
