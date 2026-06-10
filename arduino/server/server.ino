@@ -17,7 +17,12 @@ struct __attribute__((packed)) InstrumentStatus{
     uint8_t ack_ok;
     uint8_t checksum;
 };
+//初期セットアップ
 const int BAUD=115200;
+const int CMD_CONNECT=100;
+const int DUMMY=0x00;
+const int ACK_OK=200;
+const int max_try=3;
 //ピン設定
 const int CS_DEV1=D4;
 const int CS_DEV2=D5;
@@ -25,6 +30,9 @@ const int CS_DEV3=D6;
 const int CS_DEV4=D7;
 const int CS_SYNC=D9;
 const int MIC_PIN=A1;
+//SPI通信
+const unsigned long STATUS_POLL_INTERVAL_MS=50;
+unsigned long last_status_poll_ms=0;
 //コマンド生成
 uint8_t command_sequence = 0;
 //拍手検出
@@ -89,6 +97,7 @@ void setup(){
     }
     mic_setup();
     tick_setup();
+    last_status_poll_ms=millis();
 }
 
 void loop(){
@@ -104,13 +113,22 @@ void loop(){
         entry_boundary_reached=is_entry_boundary();
     }
 
-    for(int i = 0; i < 4; i++){
-        if(dev_ctl[i].failsafe){
-            continue;
+    if(entry_boundary_reached){//50ms周期前に入り境界によるコマンド送信
+        for(int i=0;i<4;i++){
+            handle_device_command(i,cmd);
         }
-        generate_cmd(0x00,cmd);//定期的に圧力センサの監視
-        spi_send(i, cmd, status);//定期的に圧力センサの監視
-        handle_device_command(i, cmd);
+    }
+    unsigned long server_now_ms=millis();
+    if(server_now_ms-last_status_poll_ms>=STATUS_POLL_INTERVAL_MS){
+        last_status_poll_ms+=STATUS_POLL_INTERVAL_MS;
+        for(int i = 0; i < 4; i++){
+            if(dev_ctl[i].failsafe){
+                continue;
+            }
+            generate_cmd(0x00,cmd);//定期的に圧力センサの監視
+            spi_send(i, cmd, status);//定期的に圧力センサの監視
+            handle_device_command(i, cmd);
+        }
     }
 
     if(mic_read()){

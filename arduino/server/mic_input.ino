@@ -8,7 +8,7 @@ bool mic_read(){
     if(now_ms-last_mic_sample_ms<MIC_SAMPLE_INTERVAL_MS){
         return false;
     }
-    last_mic_sample_ms=now_ms;
+    last_mic_sample_ms+=MIC_SAMPLE_INTERVAL_MS;
     bool judge=false;
     unsigned long start_t=now_ms;
     value=analogRead(MIC_PIN);

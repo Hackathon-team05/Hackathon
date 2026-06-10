@@ -1,9 +1,3 @@
-const int CMD_CONNECT=100;
-const int DUMMY=0x00;
-const int ACK_OK=200;
-const int max_try=3;
-
-
 void boot_setup(){
     Serial.begin(BAUD);
     spi_setup();
