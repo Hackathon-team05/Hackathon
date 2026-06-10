@@ -80,7 +80,7 @@ void handle_device_command(int dev, ControlCommand& cmd){
         dev_ctl[dev].is_playing=false;
         return;
     }
-    if(is_entry_boundary() && dev_ctl[dev].pending_entry &&! dev_ctl[dev].is_playing){
+    if(entry_boundary_reached && dev_ctl[dev].pending_entry &&! dev_ctl[dev].is_playing){
         generate_cmd(0x03,cmd);
         spi_send(dev,cmd,status);
         dev_ctl[dev].pending_entry=false;

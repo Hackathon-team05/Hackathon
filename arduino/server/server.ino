@@ -58,6 +58,7 @@ const float INTERVAL_OUTLIER_RATIO=0.3;
 unsigned long global_tick=0;
 unsigned long last_tick_us=0;
 unsigned long tick_period_us=0;
+bool entry_boundary_reached=false;
 
 struct DeviceStatus{
     uint8_t cs_pin; //ピン番号
@@ -92,6 +93,15 @@ void loop(){
     ControlCommand cmd;
     InstrumentStatus status;
 
+    entry_boundary_reached=false;
+
+    if(tick_generate()){//tick周期ごとにSYNC送信
+        digitalWrite(CS_SYNC,HIGH);
+        delayMicroseconds(10);
+        digitalWrite(CS_SYNC,LOW);
+        entry_boundary_reached=is_entry_boundary();
+    }
+
     for(int i = 0; i < 4; i++){
         if(dev_ctl[i].failsafe){
             continue;
@@ -109,11 +119,5 @@ void loop(){
             generate_cmd(0x04,cmd);
             spi_send(i, cmd, status);//BPM送信
         }
-    }
-
-    if(tick_generate()){//tick周期ごとにSYNC送信
-        digitalWrite(CS_SYNC,HIGH);
-        delayMicroseconds(10);
-        digitalWrite(CS_SYNC,LOW);
     }
 }
