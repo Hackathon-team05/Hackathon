@@ -16,6 +16,7 @@ bool wait_ack(int dev){
         }
         digitalWrite(dev,HIGH);
         retry_count++;
+        delay(100);//チェック失敗時に待ち時間
     }
     return false;
 }

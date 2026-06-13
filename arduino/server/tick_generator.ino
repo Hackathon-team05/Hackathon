@@ -2,12 +2,12 @@ void tick_setup(){
     last_tick_us=micros();
 }
 
-bool tick_generate(){
+uint32_t tick_generate(){
+    uint32_t count=0;
     tick_period_us = 60000000UL / (bpm * 16UL);//tick出力周期
-    if (micros() - last_tick_us >= tick_period_us) {
+    while (micros() - last_tick_us >= tick_period_us) {
         last_tick_us += tick_period_us;
-        global_tick++;
-        return true;
+        count++;
     }
-    return false;
+    return count;
 }

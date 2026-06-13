@@ -31,6 +31,7 @@ const int CS_DEV4=D7;
 const int CS_SYNC=D9;
 const int MIC_PIN=A1;
 //SPI通信
+const SPISettings SPI_CONFIG(1000000,MSBFIRST,SPI_MODE0);//SPI通信の仕様を明示．1MHzで通信．
 const unsigned long STATUS_POLL_INTERVAL_MS=50;
 unsigned long last_status_poll_ms=0;
 //コマンド生成
@@ -90,6 +91,7 @@ DeviceStatus dev_ctl[4] = {
 
 void setup(){
     boot_setup();
+    delay(1000);//楽器の起動待ち
     for(int i=0;i<4;i++){
         if(wait_ack(dev_ctl[i].cs_pin)==false){
             dev_ctl[i].failsafe=true;
@@ -106,11 +108,13 @@ void loop(){
 
     entry_boundary_reached=false;
 
-    if(tick_generate()){//tick周期ごとにSYNC送信
+    uint32_t tick_count=tick_generate();
+    for(uint32_t i=0;i<tick_count;i++){//tick周期ごとにSYNC送信
+        global_tick++;
         digitalWrite(CS_SYNC,HIGH);
         delayMicroseconds(10);
         digitalWrite(CS_SYNC,LOW);
-        entry_boundary_reached=is_entry_boundary();
+        entry_boundary_reached |= is_entry_boundary();
     }
 
     if(entry_boundary_reached){//50ms周期前に入り境界によるコマンド送信
