@@ -1,9 +1,3 @@
-const int CMD_CONNECT=100;
-const int DUMMY=0x00;
-const int ACK_OK=200;
-const int max_try=3;
-
-
 void boot_setup(){
     Serial.begin(BAUD);
     spi_setup();
@@ -22,6 +16,7 @@ bool wait_ack(int dev){
         }
         digitalWrite(dev,HIGH);
         retry_count++;
+        delay(100);//チェック失敗時に待ち時間
     }
     return false;
 }

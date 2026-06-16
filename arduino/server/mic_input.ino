@@ -1,10 +1,16 @@
 void mic_setup(){
     pinMode(MIC_PIN,INPUT);
+    last_mic_sample_ms=millis();
 }
 
 bool mic_read(){
+    unsigned long now_ms=millis();
+    if(now_ms-last_mic_sample_ms<MIC_SAMPLE_INTERVAL_MS){
+        return false;
+    }
+    last_mic_sample_ms+=MIC_SAMPLE_INTERVAL_MS;
     bool judge=false;
-    unsigned long start_t=millis();
+    unsigned long start_t=now_ms;
     value=analogRead(MIC_PIN);
     if(!win_full){
         mic_window[win_id] = value;

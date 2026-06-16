@@ -1,5 +1,6 @@
 void spi_setup(){
     SPI.begin();
+    SPI.beginTransaction(SPI_CONFIG);
 
     pinMode(CS_DEV1,OUTPUT);
     pinMode(CS_DEV2,OUTPUT);
