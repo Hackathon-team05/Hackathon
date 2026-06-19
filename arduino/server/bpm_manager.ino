@@ -5,6 +5,7 @@ void bpm_setup(){
     }
     clap_count = 0;
     last_time = 0;
+    estimated_interval = 60000 / DEF_BPM;
 }
 
 bool bpm_generate(unsigned long last_t){
@@ -43,12 +44,12 @@ bool bpm_generate(unsigned long last_t){
     //閾値の設定
     float lower_threshold =median_interval*(1.0-INTERVAL_OUTLIER_RATIO);
     float upper_threshold =median_interval*(1.0+INTERVAL_OUTLIER_RATIO);
-    float interval_sum = 0;
+    float estimated_clap_intervals = 0;
     uint8_t valid_interval_count=0;
 
     for(uint8_t i=0;i<CLAP_INTERVAL_COUNT;i++){
         if(clap_intervals[i]>=lower_threshold && clap_intervals[i]<=upper_threshold){
-            interval_sum += clap_intervals[i];//ウィンドウの更新
+            estimated_clap_intervals=clap_intervals[i];//ウィンドウの更新
             valid_interval_count++;
         }
     }
@@ -58,17 +59,15 @@ bool bpm_generate(unsigned long last_t){
         return false;
     }
 
-    float avg_interval_ms = interval_sum / valid_interval_count;
-    float estimated_bpm = 60000 / avg_interval_ms;
-
-    if (estimated_bpm < BPM_MIN){
-        estimated_bpm = BPM_MIN;
+    float alpha=0.8;
+    estimated_interval=alpha*estimated_clap_intervals+(1-alpha)*estimated_interval;
+    bpm = 60000 / estimated_interval;
+    if (bpm < BPM_MIN){
+        bpm = BPM_MIN;
     }
-    if (estimated_bpm > BPM_MAX){
-        estimated_bpm = BPM_MAX;
+    if (bpm > BPM_MAX){
+        bpm = BPM_MAX;
     }
-
-    bpm =bpm * (1 - SMOOTH_FACTOR) + estimated_bpm * SMOOTH_FACTOR;
     return true;
 }
 
