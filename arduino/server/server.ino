@@ -2,6 +2,7 @@
 // 役割: BPM管理・楽曲データ管理（PROGMEM）・SPI Master・マイク入力・シリアル送信
 
 #include<SPI.h>
+#include <Wire.h>
 
 struct __attribute__((packed)) ControlCommand{
     uint8_t command_type;
@@ -34,6 +35,11 @@ const int MIC_PIN=A1;
 const SPISettings SPI_CONFIG(1000000,MSBFIRST,SPI_MODE0);//SPI通信の仕様を明示．1MHzで通信．
 const unsigned long STATUS_POLL_INTERVAL_MS=50;
 unsigned long last_status_poll_ms=0;
+const uint8_t DUMMY_ACK=0x06;
+const uint8_t DUMMY_SUM=0x07;
+//I2C通信
+const uint32_t I2C_CONFIG_HZ = 100000;
+const uint8_t I2C_DEVICE_ADDRESS[4] = {0x0A,0x0B,0x0C,0x0D};
 //コマンド生成
 uint8_t command_sequence = 0;
 //拍手検出

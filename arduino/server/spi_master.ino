@@ -28,6 +28,9 @@ void spi_send(int dev,ControlCommand& cmd,InstrumentStatus& status){
     for(int i=0;i<cmd_len;i++){
         status_box[i]=SPI.transfer(cmd_box[i]);
     }
+    delay(1);
+    status_box[3]=SPI.transfer(DUMMY_ACK);
+    status_box[4]=SPI.transfer(DUMMY_SUM);//ACK_okとchecksumの新規取得
     digitalWrite(dev_pin,HIGH);
     verification_status(dev,cmd,status);
 }
