@@ -69,12 +69,15 @@ void handle_device_command(int dev, ControlCommand& cmd){
     }
     InstrumentStatus status;
     if(dev_ctl[dev].error_count>=3){
-        failsafe(dev,cmd,status);
+        // 通信エラーが続いた場合もI2C経由で停止コマンドを送る。
+        i2c_failsafe(dev,cmd,status);
         return;
     }
     if(dev_ctl[dev].pending_stop){
         generate_cmd(0x02,cmd);
-        spi_send(dev,cmd,status);
+        i2c_send(dev,cmd);
+        // 停止コマンドの応答を読み取り、sequence_ackとack_okを確認する。
+        i2c_receive_with_sequence_check(dev,cmd,status);
         dev_ctl[dev].pending_stop=false;
         dev_ctl[dev].pending_entry=false;
         dev_ctl[dev].is_playing=false;
@@ -82,7 +85,9 @@ void handle_device_command(int dev, ControlCommand& cmd){
     }
     if(entry_boundary_reached && dev_ctl[dev].pending_entry &&! dev_ctl[dev].is_playing){
         generate_cmd(0x03,cmd);
-        spi_send(dev,cmd,status);
+        // 入り境界で再生開始コマンドをI2C送信する。
+        i2c_send(dev,cmd);
+        i2c_receive_with_sequence_check(dev,cmd,status);
         dev_ctl[dev].pending_entry=false;
         dev_ctl[dev].is_playing=true;
     }

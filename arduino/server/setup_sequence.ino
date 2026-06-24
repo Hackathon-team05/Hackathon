@@ -1,7 +1,6 @@
 void boot_setup(){
     Serial.begin(BAUD);
-    spi_setup();
-    //i2c_setup();
+    i2c_setup();
     default_bpm();
 };
 
