@@ -46,7 +46,7 @@ bool win_full=false;
 //BPM管理
 const int DEF_BPM=70;
 const int BPM_MIN=60;
-const int BPM_MAX=140;
+const int BPM_MAX=120;
 uint16_t bpm=70;
 const unsigned long MIC_SAMPLE_INTERVAL_MS=10;//マイクサンプリング周期
 unsigned long last_mic_sample_ms=0;
@@ -65,6 +65,7 @@ const uint8_t CLAP_INTERVAL_COUNT = CLAP_MAX-1;
 unsigned long clap_intervals[CLAP_MAX-1];
 unsigned long clap_sorted_intervals[CLAP_MAX-1];
 const float INTERVAL_OUTLIER_RATIO=0.3;
+float estimeted_interval=60000/DEF_BPM;
 //tick管理
 unsigned long global_tick=0;
 unsigned long last_tick_us=0;
