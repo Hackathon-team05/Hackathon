@@ -1,8 +1,17 @@
 void i2c_setup(){
     Wire.begin();
     Wire.setClock(I2C_CONFIG_HZ);
+    Wire.setWireTimeout(50000, true);
     pinMode(CS_SYNC,OUTPUT);
     digitalWrite(CS_SYNC,LOW);
+}
+
+void i2c_reset_master(){
+    Wire.end();
+    delay(10);
+    Wire.begin();
+    Wire.setClock(I2C_CONFIG_HZ);
+    Wire.setWireTimeout(50000, true);
 }
 
 bool i2c_wait_ack(int dev){
@@ -17,6 +26,11 @@ bool i2c_wait_ack(int dev){
         Wire.write((uint8_t)CMD_CONNECT);//addressにCMD_CONNECT送信
         uint8_t result = Wire.endTransmission();//addressに送信終了.通信成功時に0を返す．
         Serial.print(result);
+
+        if(result == 5){
+            i2c_reset_master();
+            delay(200);
+        }
 
         if(result == 0){
             delay(1);
