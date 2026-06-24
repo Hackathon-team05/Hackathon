@@ -344,27 +344,7 @@ void on_i2c_request() {
     prepare_tx_buffer_head();
 }
 
-// アクティブな（現在鳴っている）全音符にNOTE_OFFを発行して停止する
-// (score_player.ino側のグローバル変数を参照する。旧spi_slave.inoから内容変更なし)
-void score_stop_all() {
-    if (my_score == NULL) return;
 
-    for (uint8_t i = 0; i < my_score_length; i++) {
-        // 現在音が鳴っている（アクティブな）音符があれば
-        if (note_active[i]) {
-            uint8_t pitch = pgm_read_byte(&(my_score[i].pitch));
-
-            // 本来はscore_stepと同様に現在のピッチオフセットを考慮すべきですが、
-            // ひとまず安全に音を止めるためにNOTE_OFFを送信します。
-            // ※もし不都合があれば shifted_pitch を計算して渡してください。
-            serial_tx_note_off(pitch);
-
-            note_active[i] = false; // 未アクティブ状態に戻す
-        }
-    }
-    // tickの記録もリセット
-    last_tick = 0xFFFF;
-}
 
 // ----------------------------------------------------------------------------
 // I2Cスレーブの初期化。
