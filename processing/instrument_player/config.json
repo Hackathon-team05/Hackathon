@@ -1,0 +1,26 @@
+{
+  "selectedInstrumentId": 2,
+  "baudRate": 115200,
+  "instruments": [
+    {
+      "instrumentId": 0,
+      "partName": "melody1",
+      "portName": "/dev/cu.usbmodem64E8335D31E02"
+    },
+    {
+      "instrumentId": 1,
+      "partName": "melody2",
+      "portName": "/dev/cu.usbmodem64E8335D31E02"
+    },
+    {
+      "instrumentId": 2,
+      "partName": "melody3",
+      "portName": "/dev/cu.usbmodem64E8335D31E02"
+    },
+    {
+      "instrumentId": 3,
+      "partName": "rhythm",
+      "portName": "/dev/cu.usbmodem64E8335D31E02"
+    }
+  ]
+}
