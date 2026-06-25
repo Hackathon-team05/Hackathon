@@ -25,7 +25,6 @@ bool i2c_wait_ack(int dev){
         Wire.beginTransmission(address);//addressに送信準備
         Wire.write((uint8_t)CMD_CONNECT);//addressにCMD_CONNECT送信
         uint8_t result = Wire.endTransmission();//addressに送信終了.通信成功時に0を返す．
-        Serial.print(result);
 
         if(result == 5){
             i2c_reset_master();
@@ -37,7 +36,6 @@ bool i2c_wait_ack(int dev){
             Wire.requestFrom(address, (uint8_t)1);//addressに1バイトのデータ要求と受信
             if(Wire.available() > 0){//受信データのバイト数チェック
                 uint8_t response = Wire.read();//受信データの読み取り
-                Serial.println(response);
                 if(response == ACK_OK){
                     return true;
                 }
