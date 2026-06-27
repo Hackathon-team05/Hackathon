@@ -1,6 +1,6 @@
 void boot_setup(){
     Serial.begin(BAUD);
-    spi_setup();
+    i2c_setup();
     default_bpm();
 };
 
@@ -9,7 +9,9 @@ bool wait_ack(int dev){
     while(retry_count<max_try){
         digitalWrite(dev,LOW);
         SPI.transfer(CMD_CONNECT);
+        delayMicroseconds(1000);
         uint8_t response=SPI.transfer(DUMMY);
+        Serial.println(response);
         if(response==ACK_OK){
             digitalWrite(dev,HIGH);
             return true;
