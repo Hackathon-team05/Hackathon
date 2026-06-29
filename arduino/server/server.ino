@@ -41,7 +41,7 @@ uint8_t command_sequence = 0;
 const uint32_t I2C_CONFIG_HZ = 100000;
 //拍手検出
 uint16_t value=0;
-const int PEAK_SIGMA_FACTOR=2;
+const int PEAK_SIGMA_FACTOR=5;
 const uint8_t WINDOW_SIZE=50;
 uint16_t mic_window[WINDOW_SIZE];
 uint8_t win_id=0;

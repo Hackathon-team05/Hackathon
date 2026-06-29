@@ -271,7 +271,7 @@ void test_command_generate_bpm_update(){
     log_output("command=",cmd.payload);
     log_output("BPM=",bpm);
     log_output("payload=",cmd.payload);
-    TEST_ASSERT_EQUAL_UINT8(bpm,cmd.payload);
+    TEST_ASSERT_EQUAL_UINT16(bpm,cmd.payload);
 }
 // control_command.inoに関する全テストを実行する。
 void run_control_command_tests() {
@@ -284,6 +284,7 @@ void run_control_command_tests() {
     RUN_TEST(test_verification_status_out_of_range_instrument_id);
     RUN_TEST(test_verification_status_wrong_sequence);
     RUN_TEST(test_verification_status_invalid_ack);
+    RUN_TEST(test_command_generate_bpm_update);
 }
 
 #endif

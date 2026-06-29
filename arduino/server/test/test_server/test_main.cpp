@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <SPI.h>
+#include <Wire.h>
 #include <unity.h>
 
 // 試験対象の楽器番号。0～3の範囲で指定する。
@@ -17,6 +18,15 @@ bool wait_ack(int dev);
 void spi_setup();
 void spi_send(int dev, ControlCommand& cmd, InstrumentStatus& status);
 void failsafe(int dev, ControlCommand& cmd, InstrumentStatus& status);
+
+// I2Cマスター: 初期化、接続確認、5バイト送受信、フェイルセーフ停止を行う。
+void i2c_setup();
+bool i2c_wait_ack(int dev);
+void i2c_send(int dev, ControlCommand& cmd);
+bool i2c_read_status_packet(int dev, InstrumentStatus& status);
+void i2c_receive_with_sequence_check(int dev,ControlCommand& cmd,InstrumentStatus& status);
+void i2c_receive_without_sequence_check(int dev, InstrumentStatus& status);
+void i2c_failsafe(int dev, ControlCommand& cmd, InstrumentStatus& status);
 
 // BPM管理: 拍手時刻からのBPM計算と現在値の取得を行う。
 void bpm_setup();
@@ -46,9 +56,10 @@ void handle_device_command(int dev, ControlCommand& cmd);
 #undef setup
 #undef loop
 
-// SPI処理から参照される製品コードをそのままテスト対象へ組み込む。
+// 通信処理から参照される製品コードをそのままテスト対象へ組み込む。
 #include "../../setup_sequence.ino"
 #include "../../spi_master.ino"
+#include "../../i2c_master.ino"
 #include "../../bpm_manager.ino"
 #include "../../tick_generator.ino"
 #include "../../entry_que.ino"
@@ -113,7 +124,7 @@ void print_status(const InstrumentStatus& status) {
 
 // 選択した楽器Arduinoへ接続確認を行う。
 // ACK_OKを受信した場合はtrueを返す。
-bool connect_test_device() {
+bool spi_connect_test_device() {
     int cs_pin = dev_ctl[TEST_DEVICE].cs_pin;//dev_ctl配列からcs_pinに該当する場所を抜き取る
 
     Serial.print("  [入力] 楽器番号=");
@@ -123,6 +134,20 @@ bool connect_test_device() {
     log_process("接続コマンド100を送信し、ダミーデータ0の送信中にACKを受信する");
 
     bool connected = wait_ack(cs_pin);
+    log_output("接続結果=", connected);
+    return connected;
+}
+
+bool i2c_connect_test_device() {
+    int address = dev_ctl[TEST_DEVICE].i2c_address;
+
+    Serial.print("  [入力] 楽器番号=");
+    Serial.print(TEST_DEVICE);
+    Serial.print(", I2Cアドレス=0x");
+    Serial.println(address, HEX);
+    log_process("接続コマンド100を送信し、ACK_OK=200を受信する");
+
+    bool connected = i2c_wait_ack(TEST_DEVICE);
     log_output("接続結果=", connected);
     return connected;
 }
@@ -183,8 +208,10 @@ void tearDown() {
 // 各inoファイルに対応するテストファイルを読み込む。
 #include "../cases/server_test.h"
 #include "../cases/spi_master_test.h"
+#include "../cases/i2c_master_test.h"
 #include "../cases/control_command_test.h"
-#include "../cases/integration.h"
+#include "../cases/spi_integration.h"
+#include "../cases/i2c_integration.h"
 #include "../cases/bpm_manager_test.h"
 #include "../cases/tick_generator_test.h"
 #include "../cases/entry_que_test.h"
@@ -195,14 +222,17 @@ void setup() {
     Serial.begin(115200);
     delay(2000);
 
-    spi_setup();
+    //spi_setup();
+    i2c_setup();
     delay(1000);
 
     UNITY_BEGIN();
     run_server_tests();
-    run_spi_master_tests();
+    //run_spi_master_tests();
+    run_i2c_master_tests();
     run_control_command_tests();
-    run_integration_tests();
+    //run_spi_integration_tests();
+    run_i2c_integration_tests();
     run_bpm_manager_tests();
     run_tick_generator_tests();
     run_entry_que_tests();

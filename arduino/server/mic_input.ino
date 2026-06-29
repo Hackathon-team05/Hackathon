@@ -1,4 +1,5 @@
 void mic_setup(){
+    analogReadResolution(12);
     pinMode(MIC_PIN,INPUT);
     last_mic_sample_ms=millis();
 }
@@ -33,16 +34,20 @@ bool mic_read(){
     }
     float sigma=sqrt(var/WINDOW_SIZE);
 
-    float threshold=mean+PEAK_SIGMA_FACTOR*sigma;
-    if(!peak_track&&value>threshold){
+    float deviation=value-mean;
+    if(deviation<0){
+        deviation=-deviation;
+    }
+    float threshold=PEAK_SIGMA_FACTOR*sigma;
+    if(!peak_track&&deviation>threshold){
         peak_track=true;
-        peak_max=value;
+        peak_max=deviation;
         peak_time=start_t;
         down_count=0;
         return judge;
     }else if(peak_track){
-        if(value>peak_max){
-            peak_max=value;
+        if(deviation>peak_max){
+            peak_max=deviation;
             peak_time=start_t;
             down_count=0;
         }else{

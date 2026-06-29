@@ -26,7 +26,7 @@ cd ~/program
 python3 test/tools/run_tests.py --suite test_server
 ```
 
-マイクの5秒間読み取り試験だけを実行する場合:
+80 BPMメトロノームを使用した10秒間のマイク試験だけを実行する場合:
 
 ```sh
 cd ~/program

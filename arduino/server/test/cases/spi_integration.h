@@ -6,7 +6,7 @@ void test_spi_handshake_with_instrument() {
     // 過程: CMD_CONNECT=100を送信し、DUMMY=0送信中にACKを読み取る。
     // 出力: 最大3回以内にACK_OK=200を受信し、接続成功となる。
     log_input("選択した楽器Arduinoの電源を入れ、SPI配線を接続する");
-    bool connected = connect_test_device();
+    bool connected = spi_connect_test_device();
 
     log_process("最大3回まで再試行し、正常応答200を待つ");
     TEST_ASSERT_TRUE_MESSAGE(
@@ -22,7 +22,7 @@ void test_spi_status_poll_exchange() {
     // 出力: ID、sequence_ack、ack_ok、チェックサムが正しく、error_countが0になる。
     log_input("状態監視コマンド0x00を送信し、同時に楽器状態を受信する");
     TEST_ASSERT_TRUE_MESSAGE(
-        connect_test_device(),
+        spi_connect_test_device(),
         "状態監視前の接続確認に失敗しました。"
     );
 
@@ -83,7 +83,7 @@ void test_spi_bpm_command_exchange() {
     // 出力: payload=120で、sequence_ack、ack_ok、チェックサムがすべて正常になる。
     log_input("コマンド種別0x04、BPMデータ120を送信する");
     TEST_ASSERT_TRUE_MESSAGE(
-        connect_test_device(),
+        spi_connect_test_device(),
         "BPMコマンド送信前の接続確認に失敗しました。"
     );
 
@@ -114,7 +114,7 @@ void test_spi_failsafe_after_three_errors() {
     // 出力: フェイルセーフが有効になり、エラー回数が0へ戻る。
     log_input("通信エラー回数=3、再生状態=再生中");
     TEST_ASSERT_TRUE_MESSAGE(
-        connect_test_device(),
+        spi_connect_test_device(),
         "Connnet"
     );
 
@@ -137,9 +137,8 @@ void test_spi_failsafe_after_three_errors() {
     TEST_ASSERT_EQUAL_UINT8(0, packet_sum(&cmd, sizeof(cmd)));
 }
 
-
-// 実機SPI通信を伴う統合テストを実行する。
-void run_integration_tests() {
+// 実機SPI通信およびI2C通信を伴う統合テストを実行する。
+void run_spi_integration_tests() {
     RUN_TEST(test_spi_handshake_with_instrument);
     RUN_TEST(test_spi_status_poll_exchange);
     RUN_TEST(test_verification_status_ignored_during_failsafe);

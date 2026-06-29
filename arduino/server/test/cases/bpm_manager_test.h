@@ -81,15 +81,15 @@ void test_bpm_generate_from_regular_claps() {
     TEST_ASSERT_EQUAL_UINT16(85, bpm);
 }
 
-// 平滑化後のBPMが最小値60以上になることをテストする。
+// 算出BPMを最小値60へ制限してから平滑化することをテストする。
 void test_bpm_generate_clamps_to_minimum() {
     // 入力: 1500ミリ秒間隔の拍手時刻を5回入力する。
-    // 過程: 算出値40を既定値70へ30パーセント反映してから制限する。
-    // 出力: 平滑化後のBPMが61になる。
+    // 過程: 算出値40を最小値60へ制限し、既定値70へ30パーセント反映する。
+    // 出力: 平滑化後のBPMが67になる。
     log_input("拍手間隔=1500ミリ秒、算出値=40 BPM");
     bpm_setup();
 
-    log_process("平滑化後の最終BPMを最小値60以上に制限する");
+    log_process("算出BPMを最小値60へ制限してから平滑化する");
     bpm_generate(0);
     bpm_generate(1500);
     bpm_generate(3000);
@@ -100,18 +100,18 @@ void test_bpm_generate_clamps_to_minimum() {
     log_output("BPM=", bpm);
 
     TEST_ASSERT_TRUE(result);
-    TEST_ASSERT_EQUAL_UINT16(61, bpm);
+    TEST_ASSERT_EQUAL_UINT16(67, bpm);
 }
 
-// 平滑化後のBPMが最大値120に制限されることをテストする。
+// 算出BPMを最大値140へ制限してから平滑化することをテストする。
 void test_bpm_generate_clamps_to_maximum() {
     // 入力: 100ミリ秒間隔の拍手時刻を5回入力する。
-    // 過程: 算出値600を既定値70へ30パーセント反映してから制限する。
-    // 出力: 平滑化結果229が最大値120に制限される。
+    // 過程: 算出値600を最大値140へ制限し、既定値70へ30パーセント反映する。
+    // 出力: 平滑化後のBPMが91になる。
     log_input("拍手間隔=100ミリ秒、算出値=600 BPM");
     bpm_setup();
 
-    log_process("平滑化後の最終BPMを最大値120へ制限する");
+    log_process("算出BPMを最大値140へ制限してから平滑化する");
     bpm_generate(0);
     bpm_generate(100);
     bpm_generate(200);
@@ -122,7 +122,7 @@ void test_bpm_generate_clamps_to_maximum() {
     log_output("BPM=", bpm);
 
     TEST_ASSERT_TRUE(result);
-    TEST_ASSERT_EQUAL_UINT16(120, bpm);
+    TEST_ASSERT_EQUAL_UINT16(91, bpm);
 }
 
 // 拍手間隔の外れ値がBPM計算から除外されることをテストする。
