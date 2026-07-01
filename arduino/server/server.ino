@@ -88,10 +88,10 @@ struct DeviceStatus{
 };
 
 DeviceStatus dev_ctl[4] = {
-    {CS_DEV1, 0x0A, 0, false, 0x00, 0x00, false, false, false},
-    {CS_DEV2, 0x0B, 0, false, 0x00, 0x00, false, false, false},
-    {CS_DEV3, 0x0C, 0, false, 0x00, 0x00, false, false, false},
-    {CS_DEV4, 0x0D, 0, false, 0x00, 0x00, false, false, false}
+    {CS_DEV1, 0x10, 0, false, 0x00, 0x00, false, false, false},
+    {CS_DEV2, 0x11, 0, false, 0x00, 0x00, false, false, false},
+    {CS_DEV3, 0x12, 0, false, 0x00, 0x00, false, false, false},
+    {CS_DEV4, 0x13, 0, false, 0x00, 0x00, false, false, false}
 };
 
 void setup(){
