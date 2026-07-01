@@ -65,7 +65,7 @@ const uint8_t CLAP_INTERVAL_COUNT = CLAP_MAX-1;
 unsigned long clap_intervals[CLAP_MAX-1];
 unsigned long clap_sorted_intervals[CLAP_MAX-1];
 const float INTERVAL_OUTLIER_RATIO=0.3;
-float estimeted_interval=60000/DEF_BPM;
+float estimated_interval=60000/DEF_BPM;
 //tick管理
 unsigned long global_tick=0;
 unsigned long last_tick_us=0;
