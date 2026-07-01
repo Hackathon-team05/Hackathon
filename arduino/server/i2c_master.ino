@@ -140,19 +140,12 @@ void i2c_receive_without_sequence_check(int dev, InstrumentStatus& status) {
         return;
     }
 
-    // ここから下は既存のverification_status()内のfrog_state更新処理を流用したもの。
-    // 0 -> 1 は置かれた、1 -> 0 は外された状態として扱う。
+    // 通信監視用に frog_state を更新するのみ。
+    // サーバー主導方式では入り/停止を server.ino の ENTRY_TICK スケジュールで決めるため、
+    // ここで pending_entry/pending_stop や is_playing は変更しない。
     dev_ctl[dev].error_count=0;
     dev_ctl[dev].prev_frog_state=dev_ctl[dev].frog_state;
     dev_ctl[dev].frog_state=status.frog_state;
-    if(dev_ctl[dev].prev_frog_state==0x00 && dev_ctl[dev].frog_state==0x01){
-        dev_ctl[dev].pending_entry=true;
-        dev_ctl[dev].pending_stop=false;
-    }else if(dev_ctl[dev].prev_frog_state==0x01 && dev_ctl[dev].frog_state==0x00){
-        dev_ctl[dev].pending_entry=false;
-        dev_ctl[dev].pending_stop=true;
-        dev_ctl[dev].is_playing=false;
-    }
 }
 
 void i2c_failsafe(int dev,ControlCommand& cmd,InstrumentStatus& status){
