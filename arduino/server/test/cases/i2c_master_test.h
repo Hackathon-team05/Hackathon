@@ -18,10 +18,10 @@ void test_i2c_device_addresses() {
     log_input("楽器番号=0～3");
     log_process("各楽器のI2Cアドレスを確認する");
 
-    TEST_ASSERT_EQUAL_HEX8(0x0A, dev_ctl[0].i2c_address);
-    TEST_ASSERT_EQUAL_HEX8(0x0B, dev_ctl[1].i2c_address);
-    TEST_ASSERT_EQUAL_HEX8(0x0C, dev_ctl[2].i2c_address);
-    TEST_ASSERT_EQUAL_HEX8(0x0D, dev_ctl[3].i2c_address);
+    TEST_ASSERT_EQUAL_HEX8(0x10, dev_ctl[0].i2c_address);
+    TEST_ASSERT_EQUAL_HEX8(0x11, dev_ctl[1].i2c_address);
+    TEST_ASSERT_EQUAL_HEX8(0x12, dev_ctl[2].i2c_address);
+    TEST_ASSERT_EQUAL_HEX8(0x13, dev_ctl[3].i2c_address);
     log_output("デバイスアドレス=",dev_ctl[0].i2c_address);
     log_output("，",dev_ctl[1].i2c_address);
     log_output("，",dev_ctl[2].i2c_address);
