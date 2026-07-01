@@ -17,11 +17,14 @@ bool i2c_wait_ack(int dev){
         Wire.write((uint8_t)CMD_CONNECT);//addressにCMD_CONNECT送信
         uint8_t result = Wire.endTransmission();//addressに送信終了.通信成功時に0を返す．
 
+        Serial.println(result);
+
         if(result == 0){
             delay(1);
             Wire.requestFrom(address, (uint8_t)1);//addressに1バイトのデータ要求と受信
             if(Wire.available() > 0){//受信データのバイト数チェック
                 uint8_t response = Wire.read();//受信データの読み取り
+                Serial.println(response);
                 if(response == ACK_OK){
                     return true;
                 }
@@ -38,7 +41,7 @@ bool i2c_wait_ack(int dev){
 }
 
 void i2c_send(int dev, ControlCommand& cmd){
-    if(dev < 0 || dev >= 4){
+    if(dev < 0 || dev >= 4 || dev_ctl[dev].failsafe){
         return;
     }
 
@@ -145,9 +148,9 @@ void i2c_failsafe(int dev,ControlCommand& cmd,InstrumentStatus& status){
     if(dev<0||dev>=4){
         return;
     }
-    dev_ctl[dev].failsafe=true;
     generate_cmd(0x02,cmd);
     i2c_send(dev,cmd);
     i2c_receive_with_sequence_check(dev,cmd,status);
+    dev_ctl[dev].failsafe=true;
     dev_ctl[dev].error_count=0;
 }

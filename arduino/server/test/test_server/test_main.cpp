@@ -228,10 +228,10 @@ void setup() {
 
     UNITY_BEGIN();
     run_server_tests();
-    //run_spi_master_tests();
+    run_spi_master_tests();
     run_i2c_master_tests();
     run_control_command_tests();
-    //run_spi_integration_tests();
+    run_spi_integration_tests();
     run_i2c_integration_tests();
     run_bpm_manager_tests();
     run_tick_generator_tests();

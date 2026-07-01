@@ -15,6 +15,37 @@ void test_i2c_handshake_with_instrument() {
     );
 }
 
+void test_i2c_handshake_with_all_instrument() {
+    log_input("I2Cアドレス0x0Aから0x0Dの楽器ArduinoへCMD_CONNECT=100を送信する");
+    log_process("最大3回まで再試行し、ACK_OK=200を待つ");
+
+    bool connected_A = i2c_wait_ack(TEST_DEVICE);
+    bool connected_B = i2c_wait_ack(TEST_DEVICE+1);
+    bool connected_C = i2c_wait_ack(TEST_DEVICE+2);
+    bool connected_D = i2c_wait_ack(TEST_DEVICE+3);
+
+    log_output("楽器A:接続結果=", connected_A);
+    log_output("楽器B:接続結果=", connected_B);
+    log_output("楽器C:接続結果=", connected_C);
+    log_output("楽器D:接続結果=", connected_D);
+    TEST_ASSERT_TRUE_MESSAGE(
+        connected_A,
+        "楽器AのI2C接続確認に失敗しました。SDA、SCL、GND、アドレスとスレーブ電源を確認してください。"
+    );
+    TEST_ASSERT_TRUE_MESSAGE(
+        connected_B,
+        "楽器BのI2C接続確認に失敗しました。SDA、SCL、GND、アドレスとスレーブ電源を確認してください。"
+    );
+    TEST_ASSERT_TRUE_MESSAGE(
+        connected_C,
+        "楽器CのI2C接続確認に失敗しました。SDA、SCL、GND、アドレスとスレーブ電源を確認してください。"
+    );
+    TEST_ASSERT_TRUE_MESSAGE(
+        connected_D,
+        "楽器DのI2C接続確認に失敗しました。SDA、SCL、GND、アドレスとスレーブ電源を確認してください。"
+    );
+}
+
 // I2Cで楽器の状態パケットを読み取る。
 void test_i2c_status_poll_exchange() {
     log_input("I2Cアドレス0x0Aの楽器状態を読み取る");
@@ -58,6 +89,13 @@ void test_i2c_bpm_command_exchange() {
     print_status(status);
     log_output("通信エラー回数=", dev_ctl[TEST_DEVICE].error_count);
 
+    i2c_send(TEST_DEVICE+1, cmd);
+    i2c_receive_with_sequence_check(TEST_DEVICE+1, cmd, status);
+
+    print_command(cmd);
+    print_status(status);
+    log_output("通信エラー回数=", dev_ctl[TEST_DEVICE+1].error_count);
+
     TEST_ASSERT_EQUAL_UINT8(0x04, cmd.command_type);
     TEST_ASSERT_EQUAL_UINT16(120, cmd.payload);
     TEST_ASSERT_EQUAL_UINT8(TEST_DEVICE, status.instrument_id);
@@ -97,6 +135,7 @@ void test_i2c_failsafe_after_three_errors() {
 //テストの実施
 void run_i2c_integration_tests(){
     RUN_TEST(test_i2c_handshake_with_instrument);
+    //RUN_TEST(test_i2c_handshake_with_all_instrument);
     RUN_TEST(test_i2c_status_poll_exchange);
     RUN_TEST(test_i2c_bpm_command_exchange);
     RUN_TEST(test_i2c_failsafe_after_three_errors);
