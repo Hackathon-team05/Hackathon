@@ -1,7 +1,10 @@
 // サーバーArduino
-// 役割: BPM管理・楽曲データ管理（PROGMEM）・SPI Master・マイク入力・シリアル送信
+// 役割: BPM管理・楽曲データ管理（PROGMEM）・I2C Master・マイク入力・シリアル送信
+//
+// 【通信方式】サーバ⇔楽器間はI2C（SPIから移行済み）。楽器の識別はI2Cアドレス
+//   (dev_ctl[].i2c_address = 0x10+instrument_id) で行い、tick pulseはI2Cとは別の
+//   専用GPIO(CS_SYNC)で出力する。SDA/SCLには4.7kΩプルアップを付与すること。
 
-#include<SPI.h>
 #include<Wire.h>
 
 struct __attribute__((packed)) ControlCommand{
@@ -20,9 +23,8 @@ struct __attribute__((packed)) InstrumentStatus{
 };
 //初期セットアップ
 const int BAUD=115200;
-const int CMD_CONNECT=100;
-const int DUMMY=0x00;
-const int ACK_OK=200;
+const int CMD_CONNECT=100;//I2Cハンドシェイクで楽器へ送る接続確認コマンド
+const int ACK_OK=200;//楽器がハンドシェイクに返す正常応答
 const int max_try=3;
 //ピン設定
 const int CS_DEV1=D4;
@@ -31,8 +33,7 @@ const int CS_DEV3=D6;
 const int CS_DEV4=D7;
 const int CS_SYNC=D9;
 const int MIC_PIN=A1;
-//SPI通信
-const SPISettings SPI_CONFIG(1000000,MSBFIRST,SPI_MODE0);//SPI通信の仕様を明示．1MHzで通信．
+//I2C通信の速度は下部の I2C_CONFIG_HZ で定義（i2c_master.ino の Wire.setClock で使用）
 const unsigned long STATUS_POLL_INTERVAL_MS=50;
 unsigned long last_status_poll_ms=0;
 //コマンド生成
@@ -87,6 +88,8 @@ struct DeviceStatus{
     bool is_playing;//演奏状態のフラグ
 };
 
+// i2c_address は楽器側 i2c_slave.ino の I2C_BASE_ADDRESS(0x10) + instrument_id と
+// 一致させること。dev index i ↔ instrument_id i ↔ アドレス 0x10+i の対応を保つ。
 DeviceStatus dev_ctl[4] = {
     {CS_DEV1, 0x10, 0, false, 0x00, 0x00, false, false, false},
     {CS_DEV2, 0x11, 0, false, 0x00, 0x00, false, false, false},
