@@ -31,10 +31,9 @@ String lastMessage = "waiting";
 int serialOverflowCount = 0;
 PrintWriter latencyLog;
 
-// watchdogテスト用
+// NOTE_OFF未着による音詰まりを検知する watchdog
 int  watchdogFiredCount  = 0;
 long watchdogLastFiredAt = -1;
-long watchdogTestNoteOnAt = -1;
 
 long maxDurationMs = 2000;
 long CLARINET_VIBRATO_DELAY_MS = 300;  // クラリネットがビブラートをかけ始めるまでの保持時間
@@ -108,7 +107,6 @@ void setup() {
 
 void draw() {
   processEventQueue();
-  updateSong();
 
   // NOTE_OFF watchdog
   if (!isRhythmPart() && melodySynth.activePitch != -1) {
@@ -118,7 +116,6 @@ void draw() {
       long heldMs = millis() - melodySynth.noteOnTime;
       println("WATCHDOG fired #" + watchdogFiredCount + " pitch=" + melodySynth.activePitch + " held=" + heldMs + "ms");
       melodySynth.noteOff(melodySynth.activePitch);
-      watchdogTestNoteOnAt = -1;
     }
   }
 
@@ -140,17 +137,10 @@ void draw() {
   fill(230);
   text("part: " + partName + " / port: " + portName, 12, 28);
   text("last: " + lastMessage, 12, 56);
-  text("song: " + (songPlaying ? "playing (note " + (songIndex+1) + "/" + SONG_PITCHES.length + ")" : "stopped (press P)"), 12, 80);
 
-  // watchdogテスト表示
-  if (watchdogTestNoteOnAt >= 0 && melodySynth.activePitch != -1) {
-    long elapsed = millis() - watchdogTestNoteOnAt;
-    long remaining = maxDurationMs - elapsed;
-    fill(255, 200, 0);
-    text("WATCHDOG TEST: note stuck " + elapsed + "ms / fires in " + max(0, remaining) + "ms", 12, 104);
-  } else if (watchdogLastFiredAt >= 0) {
-    fill(0, 255, 100);
-    text("WATCHDOG OK: fired " + watchdogFiredCount + " time(s), last at " + watchdogLastFiredAt + "ms", 12, 104);
+  if (watchdogLastFiredAt >= 0) {
+    fill(255, 150, 0);
+    text("WATCHDOG: fired " + watchdogFiredCount + " time(s), last at " + watchdogLastFiredAt + "ms", 12, 80);
   }
 }
 
@@ -314,178 +304,3 @@ class NoteEvent {
   }
 }
 
-// ===== テスト用（確認後に削除） =====
-// A S D F G H J K → ド レ ミ ファ ソ ラ シ ド（MIDI 60〜72, C4〜C5）
-// Q W E → キック / スネア / クラッシュ
-int[] TEST_PITCHES = {60, 62, 64, 65, 67, 69, 71, 72};
-char[] TEST_KEYS   = {'a', 's', 'd', 'f', 'g', 'h', 'j', 'k'};
-int lastTestPitch  = -1;
-
-void keyPressed() {
-  for (int i = 0; i < TEST_KEYS.length; i++) {
-    if (key == TEST_KEYS[i]) {
-      if (lastTestPitch != -1) handleNoteOff(lastTestPitch);
-      handleNoteOn(TEST_PITCHES[i], 100, System.nanoTime());
-      lastTestPitch = TEST_PITCHES[i];
-      return;
-    }
-  }
-  if (key == 'q' || key == 'Q') triggerDrumByPitch(36, 100);
-  if (key == 'w' || key == 'W') triggerDrumByPitch(38, 100);
-  if (key == 'e' || key == 'E') triggerDrumByPitch(42, 100);
-  if (key == 'p' || key == 'P') startSong();
-  if (key == 'y' || key == 'Y') selfTestSerialParser();
-  // Tキー: noteOffを送らずnoteOnだけ発火 → watchdogのテスト
-  if ((key == 't' || key == 'T') && !isRhythmPart()) {
-    int testPitch = 60;
-    println("WATCHDOG TEST: noteOn pitch=" + testPitch + " (no noteOff sent)");
-    melodySynth.noteOn(testPitch, 100);
-    watchdogTestNoteOnAt = millis();
-  }
-}
-
-void keyReleased() {
-  for (int i = 0; i < TEST_KEYS.length; i++) {
-    if (key == TEST_KEYS[i] && TEST_PITCHES[i] == lastTestPitch) {
-      handleNoteOff(lastTestPitch);
-      lastTestPitch = -1;
-      return;
-    }
-  }
-}
-
-// ===== SerialParser セルフテスト（Yキー・実機なしでパースを検証） =====
-void selfTestSerialParser() {
-  println("---- SerialParser self-test ----");
-  feedFrame(buildFrame(FRAME_TYPE_ON,  new int[] {60, 100}, true));   // 正常 NOTE_ON
-  feedFrame(buildFrame(FRAME_TYPE_OFF, new int[] {60},      true));   // 正常 NOTE_OFF
-  feedFrame(buildFrame(FRAME_TYPE_ON,  new int[] {62, 90},  false));  // チェックサム破損（破棄）
-  println("invalidFrameCount = " + parser.invalidFrameCount);
-  println("--------------------------------");
-}
-
-int[] buildFrame(int type, int[] payload, boolean validChecksum) {
-  int[] frame = new int[3 + payload.length + 1];
-  int idx = 0;
-  frame[idx++] = FRAME_START;
-  frame[idx++] = type;
-  frame[idx++] = payload.length;
-  int cs = type ^ payload.length;
-  for (int i = 0; i < payload.length; i++) { frame[idx++] = payload[i]; cs ^= payload[i]; }
-  frame[idx++] = validChecksum ? (cs & 0xFF) : ((cs ^ 0xFF) & 0xFF);
-  return frame;
-}
-
-void feedFrame(int[] frameBytes) {
-  long tRx = System.nanoTime();
-  for (int b : frameBytes) {
-    SerialFrame frame = parser.pushByte(b);
-    if (frame != null) handleFrame(frame, tRx);
-  }
-}
-
-// ===== テスト曲「かえるの歌」 =====
-// かえるの-うたが / きこえてくるよ / クワクワクワクワ / ケロケロケロケロ
-int[] SONG_PITCHES = {
-  60, 62, 64, 65, 64, 62, 60,   // かえるのうたが
-  64, 65, 67, 69, 67, 65, 64,   // きこえてくるよ
-  60, 60, 60, 60,               // クワクワクワクワ
-  60, 60, 62, 62, 64, 64, 65, 65, 64, 62, 60               // ケロケロケロケロ
-};
-float[] SONG_DURATIONS = {       // 単位: 拍
-  0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0,
-  0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1.0,
-  1.0, 1.0, 1.0, 1.0, 
-  0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.5, 0.5, 1.0
-};
-
-// ===== テスト曲「かえるの歌」ドラムパターン =====
-// フレーズごとにメロディ構造に対応（全16拍）
-// 36=キック 38=スネア 42=クラッシュ
-int[][] DRUM_PITCHES = {
-  // かえるのうたが（4拍 = 8ステップ・8分音符）
-  {36,38},{38}, {42,38},{38},
-  {36,38},{38}, {42,38},{38},
-  // きこえてくるよ（4拍 = 8ステップ・8分音符）
-  {36,38},{38}, {42,38},{38},
-  {36,38},{38}, {42,38},{38},
-  // クワクワクワクワ（4拍 = 4ステップ・4分音符）
-  {36,38}, {42,38}, {36,38}, {42,38},
-  // ケロケロケロケロ（前半2拍は8分・後半2拍は4分で締め）
-  {36,38},{38}, {42,38},{38}, {36,38},{42,38}
-};
-float[] DRUM_DURATIONS = {
-  0.5,0.5, 0.5,0.5,  0.5,0.5, 0.5,0.5,
-  0.5,0.5, 0.5,0.5,  0.5,0.5, 0.5,0.5,
-  1.0,1.0,1.0,1.0,
-  0.5,0.5, 0.5,0.5, 1.0,1.0
-};
-
-float SONG_BPM = 132.0;
-
-boolean songPlaying        = false;
-int     songIndex          = -1;
-long    songNextEventTime  = 0;
-boolean songPendingNoteOn  = false;
-int     songPendingPitch   = -1;
-
-void startSong() {
-  if (songPlaying) return;
-  println("Song started: かえるの歌");
-  songPlaying       = true;
-  songIndex         = -1;
-  songNextEventTime = millis();
-  songPendingNoteOn = false;
-  songPendingPitch  = -1;
-}
-
-void updateSong() {
-  if (!songPlaying) return;
-  if (millis() < songNextEventTime) return;
-
-  float beatMs = 60000.0 / SONG_BPM;
-
-  if (isRhythmPart()) {
-    // ドラムパート: triggerで即時発音、noteOff不要
-    songIndex++;
-    if (songIndex >= DRUM_PITCHES.length) {
-      songPlaying = false;
-      songIndex   = -1;
-      println("Song finished");
-      return;
-    }
-    for (int p : DRUM_PITCHES[songIndex]) triggerDrumByPitch(p, 100);
-    songNextEventTime = millis() + (long)(DRUM_DURATIONS[songIndex] * beatMs);
-
-  } else {
-    // メロディパート
-    if (songPendingNoteOn) {
-      handleNoteOn(songPendingPitch, 100, System.nanoTime());
-      songNextEventTime = millis() + (long)(SONG_DURATIONS[songIndex] * beatMs) - 50;
-      songPendingNoteOn = false;
-      return;
-    }
-
-    if (songIndex >= 0) handleNoteOff(SONG_PITCHES[songIndex]);
-    songIndex++;
-    if (songIndex >= SONG_PITCHES.length) {
-      songPlaying = false;
-      songIndex   = -1;
-      println("Song finished");
-      return;
-    }
-
-    int pitch = SONG_PITCHES[songIndex];
-    boolean samePitch   = songIndex > 0 && pitch == SONG_PITCHES[songIndex - 1];
-    boolean inKerokero  = songIndex >= 18;  // ケロケロセクションは全ノート間にギャップ
-
-    if (samePitch || inKerokero) {
-      songPendingNoteOn = true;
-      songPendingPitch  = pitch;
-      songNextEventTime = millis() + 50;
-    } else {
-      handleNoteOn(pitch, 100, System.nanoTime());
-      songNextEventTime = millis() + (long)(SONG_DURATIONS[songIndex] * beatMs);
-    }
-  }
-}

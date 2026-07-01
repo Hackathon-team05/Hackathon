@@ -2,6 +2,7 @@
 
 // main.ino
 #include "score_data.h"
+#include "test_config.h"   // TEST_BUTTON_MODE（テスト/本番の切替スイッチ。既定0=本番/I2C）
 
 volatile bool is_playing = false;
 volatile uint16_t local_tick = 0;
@@ -27,6 +28,12 @@ extern void process_pending_command();
 // 【追加】I2Cで受信したControlCommandの内容をSerialへ出力するための関数
 // (i2c_slave.ino側で受信内容を記録し、ここでloop()コンテキストから出力する)。
 extern void print_i2c_log();
+
+// 【テストモード切替】TEST_BUTTON_MODE==1 のときは serial_tx.ino 側のボタンテスト
+// setup()/loop() を使うため、本番(I2C)用の setup()/loop() を無効化する。
+// （is_playing/local_tick/frog_state 等のグローバルと extern は他ファイルが参照するため
+//   ガードの外に残す。無効化するのは setup()/loop() のみ。）
+#if !TEST_BUTTON_MODE
 
 void setup() {
     Serial.begin(115200);
@@ -66,3 +73,5 @@ void loop() {
         score_loop_check(local_tick);
     }
 }
+
+#endif // !TEST_BUTTON_MODE
