@@ -2,10 +2,16 @@
 #include "score_data.h"
 #include <avr/pgmspace.h>
 
-// 【バグ2修正】リズムパート(id=3)の正確な要素数を確認し、MAX_NOTESを拡張する
-// ※仮に score_part_3 が全部で 42 音ある場合は以下のように修正します
-const uint8_t score_lengths[4] = {29, 29, 29, 32}; // 20 から実際の数に変更（今は曲の拍の数と同じ32にしてるけどとりあえず楽譜を相談して決める必要がある）
-static const uint8_t MAX_NOTES = 32;               // 29 から最大値(32)に拡張
+// 各パートの音数は sizeof で自動算出する。
+// （手動カウントだと score_data.h の増減で不一致になり配列外参照を起こすため。
+//   旧実装では score_lengths[3]=32 に対し実データは24音で範囲外読みが発生していた）
+const uint8_t score_lengths[4] = {
+    sizeof(score_part_0) / sizeof(NoteEvent),  // メロディ
+    sizeof(score_part_1) / sizeof(NoteEvent),
+    sizeof(score_part_2) / sizeof(NoteEvent),
+    sizeof(score_part_3) / sizeof(NoteEvent)   // ドラム（実データに自動追従）
+};
+static const uint8_t MAX_NOTES = 32;  // note_active[] の上限。各パート音数はこれ以下であること
 
 const NoteEvent* my_score = NULL;
 uint8_t my_score_length = 0;

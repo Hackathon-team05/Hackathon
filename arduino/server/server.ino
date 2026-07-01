@@ -139,7 +139,11 @@ void loop(){
             generate_cmd(ENTRY_CMD[i],cmd);//メロディ=ENTRY_CUE / ドラム=PLAY
             i2c_send(i,cmd);
             i2c_receive_with_sequence_check(i,cmd,status);
-            dev_ctl[i].is_playing=true;//この id は開始済みとして再送を防ぐ
+            //応答検証がOK(error_count==0)のときだけ「開始済み」にする。
+            //送信/検証に失敗したら is_playing を立てず、次ループで自動的に再送する。
+            if(dev_ctl[i].error_count==0){
+                dev_ctl[i].is_playing=true;
+            }
         }
     }
 
