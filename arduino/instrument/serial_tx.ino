@@ -28,6 +28,7 @@
 // =============================================================================
 
 #include <Arduino.h>
+#include "test_config.h"   // TEST_BUTTON_MODE（テスト/本番の切替スイッチ）
 
 // ----- フレーム定数（SerialParser.pde と一致）-----
 static const uint8_t FRAME_START    = 0xAA;
@@ -67,6 +68,9 @@ void serial_tx_note_off(uint8_t pitch) {
   serial_tx_frame(FRAME_TYPE_OFF, payload, 1);
 }
 
+// ----- 公開関数: シリアル初期化 -----
+// instrument.ino の setup() から呼ばれ、Processing と同じボーレート(115200)で
+// USB シリアルを開始する。青木くん側 setup() との統合点。
 void init_serial_tx() {
   Serial.begin(115200);
 }
@@ -78,19 +82,21 @@ void init_serial_tx() {
 //   再生は millis() ベースのノンブロッキング処理で、delay を使わないため
 //   再生中でもボタン入力に即応する。
 //
-//   青木くんのコードに合流させるときは、すでに setup()/loop() が存在するため、
-//   下の SERIAL_TX_STANDALONE_TEST ブロックは 0 にして無効化する（衝突防止）。
-//   結合後に必要なのは Serial.begin(115200); と serial_tx_note_on/off の呼び出しだけ。
-//   楽譜の進行は本実装では青木くんの score_player（SYNC tick 駆動）が担当する。
+//   このブロックの有効/無効は test_config.h の TEST_BUTTON_MODE で切り替える。
+//   TEST_BUTTON_MODE 1 → このブロック(独自 setup()/loop())が有効になり、
+//                        instrument.ino 側の SPI 連携 setup()/loop() は無効化される。
+//   TEST_BUTTON_MODE 0 → このブロックは無効。本番(SPI)モードの instrument.ino が動く。
 // =============================================================================
-#define SERIAL_TX_STANDALONE_TEST 0
-
-#if SERIAL_TX_STANDALONE_TEST
+#if TEST_BUTTON_MODE
 
 // ----- ピン設定 -----
-static const int BUTTON_PIN = 4;          // タクトスイッチ（GND との間に接続、INPUT_PULLUP）
-                                          // ※ SYNC は D2 を使う設計のため D4 を割り当て
-static const int LED_PIN    = LED_BUILTIN; // 再生中に点灯
+static const int BUTTON_PIN = 4;            // 再生/停止トグル（タクトスイッチ）
+static const int LED_PIN    = LED_BUILTIN;  // 再生中に点灯
+
+// ピッチ変更は D5/D6 のオクターブボタンから圧力センサ(A0)へ変更。
+// pressure_sensor.ino の関数を使用（重さに応じて -12 / 0 / +12 を返す）。
+extern void   pressure_init();
+extern int8_t pressure_get_pitch_offset();
 
 // ----- かえるの歌の楽譜（Processing 側 instrument_player.pde と一致）-----
 // 本実装では PROGMEM に Note{start_tick,end_tick,pitch,velocity} で持つが、
@@ -111,11 +117,20 @@ static const int   SONG_LENGTH   = sizeof(SONG_PITCHES) / sizeof(SONG_PITCHES[0]
 static const float SONG_BPM      = 60.0;
 static const uint8_t SONG_VELOCITY = 100;
 
+// ----- ピッチ(オクターブ)設定：圧力センサ(A0)の重さで決まる -----
+static int8_t        octaveOffset     = 0;    // 0 / +12 / -12（pressure_get_pitch_offset()）
+static uint8_t       lastSentPitch    = 0;    // noteOff に使う実送信pitch
+
 // ----- 再生状態 -----
 static bool          songPlaying      = false;
 static int           songIndex        = -1;   // 現在発音中の音符インデックス
 static unsigned long songNextEventMs  = 0;    // 次の音符イベント時刻
 static bool          noteSounding     = false; // 現在 NOTE_ON 済みか
+static bool          pendingNoteOn    = false; // 同音/ケロケロ区切りギャップ後に発火待ち
+static uint8_t       pendingPitch     = 0;
+
+static const unsigned long GAP_MS      = 50;  // 同音/ケロケロ区切りギャップ（ms）
+static const int           KEROKERO_START = 18; // ケロケロセクション開始インデックス
 
 // ----- ボタンのデバウンス -----
 static int           lastButtonReading = HIGH;
@@ -132,13 +147,14 @@ static void songStart() {
   songPlaying     = true;
   songIndex       = -1;
   noteSounding    = false;
+  pendingNoteOn   = false;
   songNextEventMs = millis();
 }
 
 // 再生停止: 鳴っている音があれば NOTE_OFF を送って止める
 static void songStop() {
-  if (noteSounding && songIndex >= 0 && songIndex < SONG_LENGTH) {
-    serial_tx_note_off(SONG_PITCHES[songIndex]);
+  if (noteSounding) {
+    serial_tx_note_off(lastSentPitch);
   }
   songPlaying  = false;
   songIndex    = -1;
@@ -148,24 +164,50 @@ static void songStop() {
 // 再生中の進行（毎ループ呼び出し・ノンブロッキング）
 static void songUpdate() {
   if (!songPlaying) return;
-  if ((long)(millis() - songNextEventMs) < 0) return;  // まだ次イベントの時刻でない
+  if ((long)(millis() - songNextEventMs) < 0) return;
 
-  // 直前に鳴らした音を止める
+  // ギャップ後の遅延noteOn発火
+  if (pendingNoteOn) {
+    int16_t shiftedPitch = (int16_t)pendingPitch + octaveOffset;
+    shiftedPitch  = constrain(shiftedPitch, 0, 127);
+    lastSentPitch = (uint8_t)shiftedPitch;
+    serial_tx_note_on(lastSentPitch, SONG_VELOCITY);
+    noteSounding    = true;
+    pendingNoteOn   = false;
+    // 音符の残り時間 = 本来の長さ - GAP_MS
+    unsigned long dur = beatToMs(SONG_BEATS[songIndex]);
+    songNextEventMs = millis() + (dur > GAP_MS ? dur - GAP_MS : 1);
+    return;
+  }
+
+  // 直前の音を止める（実際に送ったpitchでOFF）
   if (noteSounding && songIndex >= 0) {
-    serial_tx_note_off(SONG_PITCHES[songIndex]);
+    serial_tx_note_off(lastSentPitch);
     noteSounding = false;
   }
 
   songIndex++;
   if (songIndex >= SONG_LENGTH) {
-    songStop();   // 曲末で自動停止
+    songStop();
     return;
   }
 
-  // 次の音を鳴らす
-  serial_tx_note_on(SONG_PITCHES[songIndex], SONG_VELOCITY);
-  noteSounding    = true;
-  songNextEventMs = millis() + beatToMs(SONG_BEATS[songIndex]);
+  uint8_t pitch = SONG_PITCHES[songIndex];
+  bool samePitch  = (songIndex > 0) && (pitch == SONG_PITCHES[songIndex - 1]);
+  bool inKerokero = (songIndex >= KEROKERO_START);
+
+  if (samePitch || inKerokero) {
+    pendingNoteOn   = true;
+    pendingPitch    = pitch;
+    songNextEventMs = millis() + GAP_MS;
+  } else {
+    int16_t shiftedPitch = (int16_t)pitch + octaveOffset;
+    shiftedPitch    = constrain(shiftedPitch, 0, 127);
+    lastSentPitch   = (uint8_t)shiftedPitch;
+    serial_tx_note_on(lastSentPitch, SONG_VELOCITY);
+    noteSounding    = true;
+    songNextEventMs = millis() + beatToMs(SONG_BEATS[songIndex]);
+  }
 }
 
 // ボタン押下（HIGH→LOW エッジ）でトグル
@@ -190,18 +232,23 @@ static void buttonUpdate() {
   lastButtonReading = reading;
 }
 
-//void setup() {
-//  Serial.begin(115200);
-//  pinMode(BUTTON_PIN, INPUT_PULLUP);
-//  pinMode(LED_PIN, OUTPUT);
-//  digitalWrite(LED_PIN, LOW);
-//  delay(500);
-//}
-
-void loop() {
-  buttonUpdate();
-  songUpdate();
-  digitalWrite(LED_PIN, songPlaying ? HIGH : LOW);  // 再生中は点灯
+void setup() {
+  Serial.begin(115200);
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  pressure_init();                  // 圧力センサ(A0)の初期化
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+  delay(500);
 }
 
-#endif
+void loop() {
+  // ピッチ変更：圧力センサ(A0)の重さに応じてオクターブを決定
+  //   乗ってない/普通 → 0 ／ 軽い → +12 ／ 重い → -12
+  octaveOffset = pressure_get_pitch_offset();
+
+  buttonUpdate();
+  songUpdate();
+  digitalWrite(LED_PIN, songPlaying ? HIGH : LOW);
+}
+
+#endif // TEST_BUTTON_MODE
