@@ -2,6 +2,7 @@
 // 役割: BPM管理・楽曲データ管理（PROGMEM）・SPI Master・マイク入力・シリアル送信
 
 #include<SPI.h>
+#include<Wire.h>
 
 struct __attribute__((packed)) ControlCommand{
     uint8_t command_type;
@@ -36,6 +37,8 @@ const unsigned long STATUS_POLL_INTERVAL_MS=50;
 unsigned long last_status_poll_ms=0;
 //コマンド生成
 uint8_t command_sequence = 0;
+//I2C通信
+const uint32_t I2C_CONFIG_HZ = 100000;
 //拍手検出
 uint16_t value=0;
 const int PEAK_SIGMA_FACTOR=2;
@@ -74,6 +77,7 @@ bool entry_boundary_reached=false;
 
 struct DeviceStatus{
     uint8_t cs_pin; //ピン番号
+    uint8_t i2c_address;//I2Cアドレス
     uint8_t error_count;//エラー回数
     bool failsafe;//フェイルセーフ発動フラグ
     uint8_t frog_state;//受信時のカエル人形の状態
@@ -84,17 +88,17 @@ struct DeviceStatus{
 };
 
 DeviceStatus dev_ctl[4] = {
-    {CS_DEV1, 0, false, 0x00, 0x00, false, false, false},
-    {CS_DEV2, 0, false, 0x00, 0x00, false, false, false},
-    {CS_DEV3, 0, false, 0x00, 0x00, false, false, false},
-    {CS_DEV4, 0, false, 0x00, 0x00, false, false, false}
+    {CS_DEV1, 0x0A, 0, false, 0x00, 0x00, false, false, false},
+    {CS_DEV2, 0x0B, 0, false, 0x00, 0x00, false, false, false},
+    {CS_DEV3, 0x0C, 0, false, 0x00, 0x00, false, false, false},
+    {CS_DEV4, 0x0D, 0, false, 0x00, 0x00, false, false, false}
 };
 
 void setup(){
     boot_setup();
     delay(1000);//楽器の起動待ち
     for(int i=0;i<4;i++){
-        if(wait_ack(dev_ctl[i].cs_pin)==false){
+        if(i2c_wait_ack(i)==false){
             dev_ctl[i].failsafe=true;
         }
     }
@@ -130,8 +134,9 @@ void loop(){
             if(dev_ctl[i].failsafe){
                 continue;
             }
-            generate_cmd(0x00,cmd);//定期的に圧力センサの監視
-            spi_send(i, cmd, status);//定期的に圧力センサの監視
+            // 圧力センサ監視は送信なしでInstrumentStatusだけを読む。
+            // cmd.sequenceを使う通常応答検証ではなく、読み取り専用の関数を使う。
+            i2c_receive_without_sequence_check(i,status);//圧力センサの監視
             handle_device_command(i, cmd);
         }
     }
@@ -142,7 +147,8 @@ void loop(){
                 continue;
             }
             generate_cmd(0x04,cmd);
-            spi_send(i, cmd, status);//BPM送信
+            i2c_send(i, cmd);//BPM送信
+            i2c_receive_with_sequence_check(i,cmd,status);
         }
     }
 }
