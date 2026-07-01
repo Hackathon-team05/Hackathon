@@ -19,17 +19,31 @@
 // ・「重い処理は割り込みの外(loop側)で行う」という設計方針
 //   (process_pending_command()に処理を委譲する流れは変更していない)
 //
-// 【ControlCommand/InstrumentStatusのやり取り方法の変更点】
-// SPI版は1回のCS LOW区間内でControlCommand送信とInstrumentStatus返送を
-// 同時(全二重)に行っていたが、I2Cは半二重のため以下の2フェーズに分かれる。
+// 【今回の修正: sequence_ack を同一トランザクションで正しく返す】
+// 旧SPI版は全二重(送信と返送が同時)の都合上、InstrumentStatus.sequence_ack に
+// 「今回受信したsequence」を載せられず、前回値を返す「1トランザクション遅れ」の
+// 仕様だった。しかしI2Cは半二重で「ControlCommandを完全に受信してから
+// (on_i2c_receive)、その後にInstrumentStatusを返す(on_i2c_request)」ため、
+// 今回受信したsequenceを同一トランザクション内でsequence_ackとして返せる。
+// これにより、サーバー側 verification_status() の
+// 「status.sequence_ack == cmd.sequence」判定が正しく成立する
+// (旧仕様のままだと2コマンド目以降この判定が必ず失敗し、error_countが増えて
+//  誤ってフェイルセーフに入るバグとなるため、I2C化に合わせて修正した)。
+//
+// 【今回の修正: InstrumentStatusは送信直前に毎回組み立て、checksumを常に整合させる】
+// 旧実装は送信バッファ(i2c_tx_buffer)を複数箇所で部分的に書き換えており、
+// frog_state更新時にchecksumが再計算されず不整合になる問題があった。
+// 本実装では on_i2c_request() の中で instrument_id/frog_state/sequence_ack/ack_ok
+// を集めてchecksumを計算し、5バイトを一括送信することで常に整合を保つ。
+//
+// 【ControlCommand/InstrumentStatusのやり取り方法】
+// I2Cは半二重のため以下の2フェーズに分かれる。
 //   ① マスターがWire.beginTransmission(addr)+write(5バイト)+endTransmission()
 //      でControlCommandを送信 → スレーブ側 on_i2c_receive() が呼ばれる
 //   ② マスターがWire.requestFrom(addr, 5)でInstrumentStatusを読み出す
 //      → スレーブ側 on_i2c_request() が呼ばれる
-// この①②はサーバー側(マスター)で連続して呼ぶことで、見た目上は元のSPI版の
-// 1トランザクションと同等の意味になる。サーバー側の実装(spi_master.ino等)も
-// 合わせてI2Cマスター実装に変更する必要があるが、本ファイルはアップロードされた
-// 楽器Arduino側のみを対象としている。
+// この①②はサーバー側(マスター)で連続して呼ぶことで、元のSPI版の1トランザクションと
+// 同等の意味になる。圧力センサ監視の読み取りは①を伴わず②のみで行われる。
 #include "score_data.h"
 #include <Wire.h>
 
@@ -46,6 +60,7 @@
 // 楽器ごとのI2Cアドレスは「ベースアドレス + instrument_id」で自動的に決まる。
 // instrument_id(0〜3)はEEPROMから読み出されるため、4台とも同一ファームウェアの
 // まま、CSピンのような配線分岐をせずに各楽器を一意に識別できる。
+// ※サーバー側 server.ino の dev_ctl[].i2c_address も 0x10〜0x13 に一致させること。
 const uint8_t I2C_BASE_ADDRESS = 0x10; // 4台で 0x10〜0x13 を使用する
 
 // コマンド種別 (旧spi_slave.inoのCommandTypeから値を変更していない。
@@ -86,15 +101,12 @@ extern void score_init(uint8_t instrument_id);
 extern void score_stop_all();
 extern uint8_t get_instrument_id();
 
-// 送信するInstrumentStatusのバッファ。通信中に随時更新される。
-// [0]=instrument_id [1]=frog_state [2]=sequence_ack(前回値) [3]=ack_ok [4]=checksum
-volatile uint8_t i2c_tx_buffer[sizeof(InstrumentStatus)];
-
-// 直前に正常受信できたControlCommandのsequence。
-// 旧SPI版と同じく、「今回受信したsequenceをそのまま今回の応答に載せる」のではなく、
-// 一度 prepare_tx_buffer_head() を経由してから次回の応答に反映する設計を維持する
-// (サーバー側 verification_status() の比較ロジックを変更しない前提のため)。
+// 直前に正常受信(チェックサムOK)したControlCommandのsequenceと、その検証結果。
+// I2CはControlCommandを完全に受信してから(on_i2c_receive)Statusを返す
+// (on_i2c_request)ため、on_i2c_receiveでこれらを更新すれば、直後の同一
+// トランザクションのon_i2c_requestでsequence_ack/ack_okとして正しく返せる。
 volatile uint8_t last_acked_sequence = 0;
+volatile uint8_t last_ack_ok = 0x01; // 起動直後は異常なし扱い
 
 // ----------------------------------------------------------------------------
 // 【可視化用】受信したControlCommandの内容をSerialへ出力するためのログ情報。
@@ -167,53 +179,20 @@ void process_pending_command() {
 }
 
 // ----------------------------------------------------------------------------
-// instrument_id・frog_state・sequence_ack(前回値)を送信バッファの先頭3バイトへ
-// 反映させる。I2Cでは「直前の応答(onRequest)が終わった直後」に呼び出すことで、
-// 次回の通信に向けて値を更新しておく(旧SPI版のon_cs_falling末尾と同じ役割)。
+// 送信直前にInstrumentStatus(5バイト)を組み立てる。
+// instrument_id / frog_state / sequence_ack / ack_ok を集め、最後に
+// 8bitの2の補数チェックサム(全5バイトの和が0になる値)を付与する。
+// 毎回ここで一括生成することで、frog_state等が変化してもchecksumが常に整合する。
 // ----------------------------------------------------------------------------
-void prepare_tx_buffer_head() {
-    i2c_tx_buffer[0] = get_instrument_id();
-    i2c_tx_buffer[1] = frog_state;
-    i2c_tx_buffer[2] = last_acked_sequence; // 前回受理したsequence(旧SPI版と同じ「1回遅れ」の仕様を維持)
-}
+void build_status_packet(uint8_t* out) {
+    out[0] = get_instrument_id();
+    out[1] = frog_state;             // loop()のpressure_read()で常に最新化されている値
+    out[2] = last_acked_sequence;    // 直前に正常受信したsequence(コマンド応答時は今回分)
+    out[3] = last_ack_ok;            // 直前に受信したコマンドの検証結果(コマンド応答時は今回分)
 
-// ----------------------------------------------------------------------------
-// ControlCommand(5バイト)のチェックサムを検証し、ack_ok・checksumを確定する。
-// (内容は旧spi_slave.inoから変更なし。呼び出しタイミングのみI2C用に調整)
-// ----------------------------------------------------------------------------
-void finalize_tx_buffer_tail(const uint8_t* raw_rx) {
     uint8_t sum = 0;
-    for (uint8_t i = 0; i < sizeof(ControlCommand); i++) sum += raw_rx[i];
-    bool checksum_ok = (sum == 0);
-
-    i2c_tx_buffer[3] = checksum_ok ? 0x01 : 0x00; // ack_ok: 今回コマンドの検証結果
-
-    ControlCommand cmd;
-    memcpy(&cmd, raw_rx, sizeof(ControlCommand));
-
-    // 【可視化用】受信内容をログ用変数に記録する(Serial.printはloop()側で行う)
-    log_command_type = cmd.command_type;
-    log_payload = cmd.payload;
-    log_sequence = cmd.sequence;
-    log_checksum_ok = checksum_ok;
-    has_log_entry = true;
-
-    if (checksum_ok) {
-        // 次回の通信でsequence_ackとして返すため記録する(今回の応答にはまだ反映しない)
-        last_acked_sequence = cmd.sequence;
-
-        // 実コマンド処理はloop()側へ予約するだけ(指摘4対応、重い処理を割り込み外に出す)
-        pending_command_type = cmd.command_type;
-        pending_payload = cmd.payload;
-        has_pending_command = true;
-    }
-    // checksum不一致の場合はlast_acked_sequenceを更新しない
-    // (= 次回もまだ「直前に成功した値」を返し続ける)
-
-    // InstrumentStatus全体(checksum以外の4バイト)の和から、2の補数チェックサムを計算
-    uint8_t out_sum = 0;
-    for (uint8_t i = 0; i < sizeof(InstrumentStatus) - 1; i++) out_sum += i2c_tx_buffer[i];
-    i2c_tx_buffer[4] = (uint8_t)(0 - out_sum);
+    for (uint8_t i = 0; i < sizeof(InstrumentStatus) - 1; i++) sum += out[i];
+    out[4] = (uint8_t)(0 - sum);
 }
 
 // ----------------------------------------------------------------------------
@@ -261,19 +240,6 @@ void print_i2c_log() {
 }
 
 // ----------------------------------------------------------------------------
-// 起動直後など、ControlCommandを介さない場面用の初期送信バッファ作成。
-// (内容は旧spi_slave.inoから変更なし)
-// ----------------------------------------------------------------------------
-void prepare_tx_buffer_idle() {
-    prepare_tx_buffer_head();
-    i2c_tx_buffer[3] = 0x01; // 初期状態は異常なしとして扱う
-
-    uint8_t sum = 0;
-    for (uint8_t i = 0; i < sizeof(InstrumentStatus) - 1; i++) sum += i2c_tx_buffer[i];
-    i2c_tx_buffer[4] = (uint8_t)(0 - sum);
-}
-
-// ----------------------------------------------------------------------------
 // Wireライブラリの onReceive ハンドラ。
 // マスターがWire.beginTransmission(addr)+write(...)+endTransmission()で
 // ControlCommand(5バイト)、またはハンドシェイク用の1バイト(CMD_CONNECT)を
@@ -318,13 +284,42 @@ void on_i2c_receive(int num_bytes) {
     }
 
     // ここでbuf[0..4] = ControlCommandの5バイトが揃った。
-    finalize_tx_buffer_tail(buf); // i2c_tx_buffer[3](ack_ok), [4](checksum)を確定
+    // チェックサム検証(全5バイトの和が0なら正常)を行う。
+    uint8_t sum = 0;
+    for (uint8_t i = 0; i < sizeof(ControlCommand); i++) sum += buf[i];
+    bool checksum_ok = (sum == 0);
+
+    ControlCommand cmd;
+    memcpy(&cmd, buf, sizeof(ControlCommand));
+
+    // 【可視化用】受信内容をログ用変数に記録する(Serial.printはloop()側で行う)
+    log_command_type = cmd.command_type;
+    log_payload = cmd.payload;
+    log_sequence = cmd.sequence;
+    log_checksum_ok = checksum_ok;
+    has_log_entry = true;
+
+    // ack_ok と sequence_ack を確定する。直後のon_i2c_request(同一トランザクション)で
+    // これらがそのまま返るため、サーバーのsequence_ack一致判定が正しく成立する。
+    last_ack_ok = checksum_ok ? 0x01 : 0x00;
+    if (checksum_ok) {
+        last_acked_sequence = cmd.sequence;
+
+        // 実コマンド処理はloop()側へ予約するだけ(重い処理を割り込み外に出す)
+        pending_command_type = cmd.command_type;
+        pending_payload = cmd.payload;
+        has_pending_command = true;
+    }
+    // checksum不一致の場合はlast_acked_sequenceを更新しない。
+    // (ack_ok=0x00 かつ sequence_ack が今回のsequenceと不一致になるため、
+    //  サーバー側は確実に通信エラーとして扱える)
 }
 
 // ----------------------------------------------------------------------------
 // Wireライブラリの onRequest ハンドラ。
 // マスターがWire.requestFrom(addr, n)を呼んだときに呼ばれる。
 // ハンドシェイク直後はACK_OK(1バイト)、それ以外はInstrumentStatus(5バイト)を返す。
+// InstrumentStatusは送信直前にbuild_status_packet()で一括生成し、checksumを整合させる。
 // ----------------------------------------------------------------------------
 void on_i2c_request() {
     if (handshake_pending) {
@@ -333,18 +328,10 @@ void on_i2c_request() {
         return;
     }
 
-    uint8_t tmp[sizeof(InstrumentStatus)];
-    memcpy(tmp, (const void*)i2c_tx_buffer, sizeof(tmp));
-    Wire.write(tmp, sizeof(tmp));
-
-    // 今回の応答送出が完了したので、次回の通信に向けてhead(instrument_id/
-    // frog_state/sequence_ack)を更新しておく。旧SPI版のon_cs_falling末尾と
-    // 同じタイミング(=このタイミングで更新することで、sequence_ackが
-    // 「直前に成功したsequence」を返す1回遅れの挙動を維持する)。
-    prepare_tx_buffer_head();
+    uint8_t out[sizeof(InstrumentStatus)];
+    build_status_packet(out);
+    Wire.write(out, sizeof(out));
 }
-
-
 
 // ----------------------------------------------------------------------------
 // I2Cスレーブの初期化。
@@ -357,8 +344,6 @@ void init_i2c_slave() {
     Wire.begin(addr);
     Wire.onReceive(on_i2c_receive);
     Wire.onRequest(on_i2c_request);
-
-    prepare_tx_buffer_idle(); // 起動直後の送信バッファを用意
 
     Serial.print(F("[BOOT] I2C slave address = 0x"));
     Serial.println(addr, HEX);
