@@ -49,7 +49,7 @@ bool win_full=false;
 //BPM管理
 const int DEF_BPM=70;
 const int BPM_MIN=60;
-const int BPM_MAX=140;
+const int BPM_MAX=120;
 uint16_t bpm=70;
 const unsigned long MIC_SAMPLE_INTERVAL_MS=10;//マイクサンプリング周期
 unsigned long last_mic_sample_ms=0;
@@ -68,6 +68,7 @@ const uint8_t CLAP_INTERVAL_COUNT = CLAP_MAX-1;
 unsigned long clap_intervals[CLAP_MAX-1];
 unsigned long clap_sorted_intervals[CLAP_MAX-1];
 const float INTERVAL_OUTLIER_RATIO=0.3;
+float estimated_interval=60000/DEF_BPM;
 //tick管理
 unsigned long global_tick=0;
 unsigned long last_tick_us=0;
@@ -87,10 +88,10 @@ struct DeviceStatus{
 };
 
 DeviceStatus dev_ctl[4] = {
-    {CS_DEV1, 0x0A, 0, false, 0x00, 0x00, false, false, false},
-    {CS_DEV2, 0x0B, 0, false, 0x00, 0x00, false, false, false},
-    {CS_DEV3, 0x0C, 0, false, 0x00, 0x00, false, false, false},
-    {CS_DEV4, 0x0D, 0, false, 0x00, 0x00, false, false, false}
+    {CS_DEV1, 0x10, 0, false, 0x00, 0x00, false, false, false},
+    {CS_DEV2, 0x11, 0, false, 0x00, 0x00, false, false, false},
+    {CS_DEV3, 0x12, 0, false, 0x00, 0x00, false, false, false},
+    {CS_DEV4, 0x13, 0, false, 0x00, 0x00, false, false, false}
 };
 
 void setup(){
