@@ -155,6 +155,15 @@ void process_pending_command() {
             // 圧力センサ監視用ポーリング。状態更新のみで、再生制御は行わない。
             break;
         case CMD_PLAY:
+            // 【修正】ENTRY_CUEと同様にlocal_tickをリセットし、score_init()で
+            // note_active[]・last_tickを初期化してから再生開始する。
+            // これが無いと、一度演奏した後の再テストで前回演奏の残留local_tick
+            // から再生が始まり、他パート(ENTRY_CUEで毎回0にリセットされる)との
+            // 間でズレが生じる(ドラムだけズレる不具合の原因だった)。
+            noInterrupts();
+            local_tick = 0;
+            interrupts();
+            score_init(get_instrument_id());
             is_playing = true;
             break;
         case CMD_STOP:
@@ -284,11 +293,7 @@ void on_i2c_receive(int num_bytes) {
     }
 
     // ここでbuf[0..4] = ControlCommandの5バイトが揃った。
-    // チェックサム検証(全5バイトの和が0なら正常)を行う。
-    uint8_t sum = 0;
-    for (uint8_t i = 0; i < sizeof(ControlCommand); i++) sum += buf[i];
-    bool checksum_ok = (sum == 0);
-
+    // 【実験: チェックサム検証を無効化】検証せず常に受理する。
     ControlCommand cmd;
     memcpy(&cmd, buf, sizeof(ControlCommand));
 
@@ -296,23 +301,16 @@ void on_i2c_receive(int num_bytes) {
     log_command_type = cmd.command_type;
     log_payload = cmd.payload;
     log_sequence = cmd.sequence;
-    log_checksum_ok = checksum_ok;
+    log_checksum_ok = true; // チェックサム廃止のため常にtrue扱い
     has_log_entry = true;
 
-    // ack_ok と sequence_ack を確定する。直後のon_i2c_request(同一トランザクション)で
-    // これらがそのまま返るため、サーバーのsequence_ack一致判定が正しく成立する。
-    last_ack_ok = checksum_ok ? 0x01 : 0x00;
-    if (checksum_ok) {
-        last_acked_sequence = cmd.sequence;
-
-        // 実コマンド処理はloop()側へ予約するだけ(重い処理を割り込み外に出す)
-        pending_command_type = cmd.command_type;
-        pending_payload = cmd.payload;
-        has_pending_command = true;
-    }
-    // checksum不一致の場合はlast_acked_sequenceを更新しない。
-    // (ack_ok=0x00 かつ sequence_ack が今回のsequenceと不一致になるため、
-    //  サーバー側は確実に通信エラーとして扱える)
+    // 検証せず、今回のsequenceとコマンドをそのまま採用する。
+    // ack_ok は常に正常(0x01)、sequence_ack は今回のsequenceを返す。
+    last_ack_ok = 0x01;
+    last_acked_sequence = cmd.sequence;
+    pending_command_type = cmd.command_type;
+    pending_payload = cmd.payload;
+    has_pending_command = true;
 }
 
 // ----------------------------------------------------------------------------

@@ -28,6 +28,8 @@ extern void process_pending_command();
 // 【追加】I2Cで受信したControlCommandの内容をSerialへ出力するための関数
 // (i2c_slave.ino側で受信内容を記録し、ここでloop()コンテキストから出力する)。
 extern void print_i2c_log();
+// 【追加】内蔵12x8ドットマトリクスLEDに担当パート名を表示するための関数
+extern void matrix_display_init();
 
 // 【テストモード切替】TEST_BUTTON_MODE==1 のときは serial_tx.ino 側のボタンテスト
 // setup()/loop() を使うため、本番(I2C)用の setup()/loop() を無効化する。
@@ -43,6 +45,7 @@ void setup() {
     init_i2c_slave();
     sync_init();
     pressure_init();
+    matrix_display_init();
 
     // 【追加】起動完了時に一度だけ表示する。担当パート(instrument_id)が
     // 正しく読み出せているかをここで確認できる。
