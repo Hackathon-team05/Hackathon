@@ -153,6 +153,7 @@ void i2c_failsafe(int dev,ControlCommand& cmd,InstrumentStatus& status){
         return;
     }
     dev_ctl[dev].failsafe=true;
+    failsafe_light(dev);
     generate_cmd(0x02,cmd);
     i2c_send(dev,cmd);
     i2c_receive_with_sequence_check(dev,cmd,status);
