@@ -1,5 +1,6 @@
 void generate_cmd(int command,ControlCommand& cmd){
-    if(command==0x00||command==0x01||command==0x02||command==0x03){
+    // 【今回追加】0x05=CMD_RESET(tick初期化コマンド)もpayload無しの単純コマンドとして扱う。
+    if(command==0x00||command==0x01||command==0x02||command==0x03||command==0x05){
         cmd.command_type=command;
         cmd.payload=0x00;
         cmd.sequence= command_sequence++;

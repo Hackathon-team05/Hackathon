@@ -70,7 +70,10 @@ enum CommandType : uint8_t {
     CMD_PLAY        = 0x01,
     CMD_STOP        = 0x02,
     CMD_ENTRY_CUE   = 0x03,
-    CMD_BPM_UPDATE  = 0x04
+    CMD_BPM_UPDATE  = 0x04,
+    // 【今回追加】サーバーのsetup()から起動直後に送るtick初期化コマンド。
+    // server.ino側のCMD_RESETと値を一致させること(0x05)。
+    CMD_RESET       = 0x05
 };
 
 // server.ino の wait_ack() ハンドシェイクと対応する値(旧spi_slave.inoから変更なし)
@@ -173,6 +176,20 @@ void process_pending_command() {
             // 楽器側はBPM値そのものを保持しない設計のため、現状は受信のみ。
             (void)payload;
             break;
+        case CMD_RESET:
+            // 【今回追加】サーバー起動時のtick初期化コマンド。
+            // サーバーだけがリセットされても楽器側は電源が入ったままのため、
+            // 前回演奏中のis_playing=true/local_tickが進行した状態を保持してしまう。
+            // これを放置すると、サーバー再起動後の新しい輪唱(global_tick=0起点)に対して
+            // 楽器側だけ既存のtick位置から再開してしまい「途中参戦」になる。
+            // そのためCMD_RESETを受けたら、演奏状態を完全に先頭へ戻す。
+            is_playing = false;
+            score_stop_all();   // 鳴っている音があれば強制NOTE_OFFし、内部tick記録もクリアする
+            noInterrupts();
+            local_tick = 0;      // SYNC割り込み(on_sync_tick)が進めるtickの起点を0に戻す
+            interrupts();
+            frog_state = 0;      // 圧力センサの状態も初期化(次回pressure_read()で上書きされる)
+            break;
         default:
             break;
     }
@@ -229,6 +246,7 @@ void print_i2c_log() {
         case CMD_STOP:        Serial.print(F("STOP")); break;
         case CMD_ENTRY_CUE:   Serial.print(F("ENTRY_CUE")); break;
         case CMD_BPM_UPDATE:  Serial.print(F("BPM_UPDATE")); break;
+        case CMD_RESET:       Serial.print(F("RESET")); break;
         default:              Serial.print(command_type); break;
     }
     Serial.print(F(" payload="));
