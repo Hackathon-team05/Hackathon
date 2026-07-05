@@ -6,6 +6,11 @@
 //   専用GPIO(CS_SYNC)で出力する。SDA/SCLには4.7kΩプルアップを付与すること。
 
 #include<Wire.h>
+#include "Arduino_LED_Matrix.h"
+
+ArduinoLEDMatrix matrix;
+
+uint8_t frame[8][12] = {};
 
 struct __attribute__((packed)) ControlCommand{
     uint8_t command_type;
@@ -107,9 +112,13 @@ DeviceStatus dev_ctl[4] = {
 void setup(){
     boot_setup();
     delay(1000);//楽器の起動待ち
+    LED_setup();//LEDマトリックスの初期化
     for(int i=0;i<4;i++){
         if(i2c_wait_ack(i)==false){
             dev_ctl[i].failsafe=true;
+            failsafe_light(i);
+        }else{
+            light_up(i);
         }
     }
     mic_setup();
