@@ -4,7 +4,7 @@
 const int EEPROM_ID_ADDR = 0x00;
 const int ERROR_LED_PIN = 13;
 
-uint8_t instrument_id = 0xFF;
+uint8_t instrument_id = 0x00;
 
 uint8_t eeprom_read_instrument_id() {
     uint8_t id = EEPROM.read(EEPROM_ID_ADDR);
