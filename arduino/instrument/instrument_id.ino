@@ -18,6 +18,7 @@ void instrument_id_init() {
     pinMode(ERROR_LED_PIN, OUTPUT);
     digitalWrite(ERROR_LED_PIN, LOW);
 
+    EEPROM.write(EEPROM_ID_ADDR,2);//楽器番号によって数値を変更
     instrument_id = eeprom_read_instrument_id();
 
     if (instrument_id == 0xFF) {
