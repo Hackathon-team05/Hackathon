@@ -14,6 +14,16 @@ struct NoteEvent {
 const uint8_t TOTAL_PARTS = 4;
 const uint16_t LOOP_MAX_TICK = 512;
 
+// 【今回追加】自パート演奏の終了判定に使う「ループ回数(A)」。
+// local_tick は CMD_PLAY/CMD_ENTRY_CUE/CMD_RESET 受信時に 0 へリセットされたあと、
+// on_sync_tick(sync_isr.ino) によって tick が来るたびに単純に加算され続ける
+// (instrument.ino 側では、区切りのために毎ループ 0 へ巻き戻すことはしない)。
+// そのため「1ループ分のtick数(LOOP_MAX_TICK) × このA回」に local_tick が達したら
+// 「自分のパートをA回演奏し終わった」とみなし、演奏をそこで終了する
+// (is_playing=false にして、それ以上ループさせない)。
+// パートごとに終わるタイミングを変えたい場合は、この配列の各要素(instrument_id順)を編集する。
+const uint16_t PART_LOOP_COUNT[TOTAL_PARTS] = {4, 4, 4, 4};
+
 #define DRUM_KICK  36
 #define DRUM_SNARE 38
 #define DRUM_HH    42
