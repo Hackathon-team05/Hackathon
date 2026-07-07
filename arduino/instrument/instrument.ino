@@ -19,7 +19,6 @@ extern uint8_t pressure_read();
 extern int8_t pressure_get_pitch_offset();  // 【追加】
 
 extern void score_step(uint16_t local_tick, int8_t pitch_offset); //引数追加
-extern void score_loop_check(volatile uint16_t &local_tick);
 extern void score_stop_all();
 // 【追加】i2c_slave.ino のI2C受信割り込み(on_i2c_receive)が予約したコマンドを、
 // 割り込みの外(loop側)で実際に実行するための関数。重い処理(score_init等)を
@@ -28,8 +27,6 @@ extern void process_pending_command();
 // 【追加】I2Cで受信したControlCommandの内容をSerialへ出力するための関数
 // (i2c_slave.ino側で受信内容を記録し、ここでloop()コンテキストから出力する)。
 extern void print_i2c_log();
-// 【追加】内蔵12x8ドットマトリクスLEDに担当パート名を表示するための関数
-extern void matrix_display_init();
 
 // 【テストモード切替】TEST_BUTTON_MODE==1 のときは serial_tx.ino 側のボタンテスト
 // setup()/loop() を使うため、本番(I2C)用の setup()/loop() を無効化する。
@@ -70,9 +67,31 @@ void loop() {
         uint16_t current_tick = local_tick;
         interrupts();
 
-        int8_t pitch_offset = pressure_get_pitch_offset(); //追加
-        score_step(current_tick, pitch_offset); //変更
-        score_loop_check(local_tick);
+        // 【今回追加】自分のパートの終了判定。
+        // local_tickはCMD_PLAY/CMD_ENTRY_CUE/CMD_RESET受信時に0へリセットされたあと、
+        // on_sync_tick(sync_isr.ino)によってtickが来るたびに単純に加算され続ける値
+        // (以前あったscore_loop_check()による毎ループ0への巻き戻しはもう行わない)。
+        // そのため「1ループ分のtick数(LOOP_MAX_TICK) × 指定ループ回数」を
+        // local_tickが超えたかどうかで「自分のパートを指定回数演奏し終わったか」を
+        // 判定できる(A回ループさせたいなら LOOP_MAX_TICK×A == local_tick で分岐)。
+        uint16_t stop_tick = (uint16_t)(LOOP_MAX_TICK * PART_LOOP_COUNT[get_instrument_id()]);
+
+        if (current_tick >= stop_tick) {
+            // 指定回数のループを演奏し終えたので、それ以上ループしないよう再生を終了する。
+            // is_playing=falseにすることで、on_sync_tick側もこれ以降local_tickを
+            // 加算しなくなり(is_playingを見て加算しているため)、自然に停止し続ける。
+            is_playing = false;
+            score_stop_all(); // 鳴っている音が残っていれば強制NOTE_OFFして止める
+
+            Serial.print(F("[PART END] instrument_id="));
+            Serial.print(get_instrument_id());
+            Serial.println(F(" reached loop count. stopped."));
+        } else {
+            int8_t pitch_offset = pressure_get_pitch_offset(); //追加
+            // score_step()にはscore_data.hの譜面基準(0〜LOOP_MAX_TICK-1)のtick位置を渡す。
+            // local_tick自体はもう毎ループ0に巻き戻らないため、ここで割った余りを渡す。
+            score_step((uint16_t)(current_tick % LOOP_MAX_TICK), pitch_offset); //変更
+        }
     }
 }
 

@@ -90,6 +90,11 @@ void score_step(uint16_t local_tick, int8_t pitch_offset) {
     last_tick = local_tick;
 }
 
+// 【今回の変更に伴う注記】自パート終了機能(score_data.hのPART_LOOP_COUNT)の導入により、
+// instrument.ino側はもうlocal_tickを毎ループ0へ巻き戻さず、raw値のまま増加させ続けて
+// 終了判定に使うようになった。そのため、この関数はinstrument.ino側からは呼ばれなくなった
+// (score_step()へ渡すtickはinstrument.ino側で `local_tick % LOOP_MAX_TICK` を計算して渡す)。
+// 互換性のため関数自体は残しているが、現状未使用。
 void score_loop_check(volatile uint16_t &local_tick) {
     if (local_tick >= LOOP_MAX_TICK) {
         local_tick = 0;
