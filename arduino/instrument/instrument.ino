@@ -45,7 +45,6 @@ void setup() {
     init_i2c_slave();
     sync_init();
     pressure_init();
-    matrix_display_init();
 
     // 【追加】起動完了時に一度だけ表示する。担当パート(instrument_id)が
     // 正しく読み出せているかをここで確認できる。
