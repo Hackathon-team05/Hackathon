@@ -1,8 +1,17 @@
 void i2c_setup(){
     Wire.begin();
     Wire.setClock(I2C_CONFIG_HZ);
+    Wire.setWireTimeout(50000, true);
     pinMode(CS_SYNC,OUTPUT);
     digitalWrite(CS_SYNC,LOW);
+}
+
+void i2c_reset_master(){
+    Wire.end();
+    delay(10);
+    Wire.begin();
+    Wire.setClock(I2C_CONFIG_HZ);
+    Wire.setWireTimeout(50000, true);
 }
 
 bool i2c_wait_ack(int dev){
@@ -17,14 +26,16 @@ bool i2c_wait_ack(int dev){
         Wire.write((uint8_t)CMD_CONNECT);//addressにCMD_CONNECT送信
         uint8_t result = Wire.endTransmission();//addressに送信終了.通信成功時に0を返す．
 
-        Serial.println(result);
+        if(result == 5){
+            i2c_reset_master();
+            delay(200);
+        }
 
         if(result == 0){
             delay(1);
             Wire.requestFrom(address, (uint8_t)1);//addressに1バイトのデータ要求と受信
             if(Wire.available() > 0){//受信データのバイト数チェック
                 uint8_t response = Wire.read();//受信データの読み取り
-                Serial.println(response);
                 if(response == ACK_OK){
                     return true;
                 }
@@ -41,7 +52,7 @@ bool i2c_wait_ack(int dev){
 }
 
 void i2c_send(int dev, ControlCommand& cmd){
-    if(dev < 0 || dev >= 4 || dev_ctl[dev].failsafe){
+    if(dev < 0 || dev >= 4){
         return;
     }
 
@@ -129,28 +140,22 @@ void i2c_receive_without_sequence_check(int dev, InstrumentStatus& status) {
         return;
     }
 
-    // ここから下は既存のverification_status()内のfrog_state更新処理を流用したもの。
-    // 0 -> 1 は置かれた、1 -> 0 は外された状態として扱う。
+    // 通信監視用に frog_state を更新するのみ。
+    // サーバー主導方式では入り/停止を server.ino の ENTRY_TICK スケジュールで決めるため、
+    // ここで pending_entry/pending_stop や is_playing は変更しない。
     dev_ctl[dev].error_count=0;
     dev_ctl[dev].prev_frog_state=dev_ctl[dev].frog_state;
     dev_ctl[dev].frog_state=status.frog_state;
-    if(dev_ctl[dev].prev_frog_state==0x00 && dev_ctl[dev].frog_state==0x01){
-        dev_ctl[dev].pending_entry=true;
-        dev_ctl[dev].pending_stop=false;
-    }else if(dev_ctl[dev].prev_frog_state==0x01 && dev_ctl[dev].frog_state==0x00){
-        dev_ctl[dev].pending_entry=false;
-        dev_ctl[dev].pending_stop=true;
-        dev_ctl[dev].is_playing=false;
-    }
 }
 
 void i2c_failsafe(int dev,ControlCommand& cmd,InstrumentStatus& status){
     if(dev<0||dev>=4){
         return;
     }
+    dev_ctl[dev].failsafe=true;
+    failsafe_light(dev);
     generate_cmd(0x02,cmd);
     i2c_send(dev,cmd);
     i2c_receive_with_sequence_check(dev,cmd,status);
-    dev_ctl[dev].failsafe=true;
     dev_ctl[dev].error_count=0;
 }

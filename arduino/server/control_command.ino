@@ -1,5 +1,6 @@
 void generate_cmd(int command,ControlCommand& cmd){
-    if(command==0x00||command==0x01||command==0x02||command==0x03){
+    // 【今回追加】0x05=CMD_RESET(tick初期化コマンド)もpayload無しの単純コマンドとして扱う。
+    if(command==0x00||command==0x01||command==0x02||command==0x03||command==0x05){
         cmd.command_type=command;
         cmd.payload=0x00;
         cmd.sequence= command_sequence++;
@@ -50,45 +51,22 @@ void verification_status(int dev, ControlCommand& cmd, InstrumentStatus& status)
         dev_ctl[dev].error_count=0;
         dev_ctl[dev].prev_frog_state=dev_ctl[dev].frog_state;
         dev_ctl[dev].frog_state=status.frog_state;
-        if(dev_ctl[dev].prev_frog_state==0x00 && dev_ctl[dev].frog_state==0x01){//圧力センサが変更あり（置かれた）
-            dev_ctl[dev].pending_entry=true;
-            dev_ctl[dev].pending_stop=false;//再生フラグ
-        }else if(dev_ctl[dev].prev_frog_state==0x01 && dev_ctl[dev].frog_state==0x00){//圧力センサが変化あり（はずされた）
-            dev_ctl[dev].pending_entry=false;
-            dev_ctl[dev].pending_stop=true;
-            dev_ctl[dev].is_playing=false;//停止フラグ
-        }
+        //サーバー主導方式では入り/停止を server.ino の ENTRY_TICK スケジュールで決めるため、
+        //frog_state は通信監視用に更新するのみで、pending_entry/pending_stop は設定しない。
     }else{
         dev_ctl[dev].error_count++;
     }
 }
 
+// サーバー主導方式では入り(ENTRY_CUE/PLAY)は loop() の ENTRY_TICK スケジュールで送るため、
+// この関数は「通信エラー3回連続時のフェイルセーフ」のみを担当する。
 void handle_device_command(int dev, ControlCommand& cmd){
     if(dev<0||dev>=4||dev_ctl[dev].failsafe){
         return;
     }
     InstrumentStatus status;
     if(dev_ctl[dev].error_count>=3){
-        // 通信エラーが続いた場合もI2C経由で停止コマンドを送る。
+        // 通信エラーが続いた楽器へは最終STOPを送り、以降の新規送信を停止する。
         i2c_failsafe(dev,cmd,status);
-        return;
-    }
-    if(dev_ctl[dev].pending_stop){
-        generate_cmd(0x02,cmd);
-        i2c_send(dev,cmd);
-        // 停止コマンドの応答を読み取り、sequence_ackとack_okを確認する。
-        i2c_receive_with_sequence_check(dev,cmd,status);
-        dev_ctl[dev].pending_stop=false;
-        dev_ctl[dev].pending_entry=false;
-        dev_ctl[dev].is_playing=false;
-        return;
-    }
-    if(entry_boundary_reached && dev_ctl[dev].pending_entry &&! dev_ctl[dev].is_playing){
-        generate_cmd(0x03,cmd);
-        // 入り境界で再生開始コマンドをI2C送信する。
-        i2c_send(dev,cmd);
-        i2c_receive_with_sequence_check(dev,cmd,status);
-        dev_ctl[dev].pending_entry=false;
-        dev_ctl[dev].is_playing=true;
     }
 }
