@@ -16,7 +16,6 @@ struct __attribute__((packed)) ControlCommand{
     uint8_t command_type;
     uint16_t payload;
     uint8_t sequence;
-    uint8_t checksum;
 };
 
 struct __attribute__((packed)) InstrumentStatus{
@@ -24,7 +23,6 @@ struct __attribute__((packed)) InstrumentStatus{
     uint8_t frog_state;
     uint8_t sequence_ack;
     uint8_t ack_ok;
-    uint8_t checksum;
 };
 //初期セットアップ
 const int BAUD=115200;
