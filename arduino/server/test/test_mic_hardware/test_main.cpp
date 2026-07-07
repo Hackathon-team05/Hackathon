@@ -34,6 +34,10 @@ void verification_status(
 );
 void handle_device_command(int dev, struct ControlCommand& cmd);
 
+void LED_setup();
+void light_up(int dev);
+void failsafe_light(int dev);
+
 // 製品側のsetup/loopと、Unityテスト側のsetup/loopの名前衝突を防ぐ。
 #define setup server_application_setup
 #define loop server_application_loop
@@ -44,6 +48,7 @@ void handle_device_command(int dev, struct ControlCommand& cmd);
 // マイク読み取り処理と、拍手時刻からBPMを計算する処理をテスト対象にする。
 #include "../../bpm_manager.ino"
 #include "../../mic_input.ino"
+#include "../../LED.ino"
 
 // 80 BPMのメトロノーム音を観測する時間。
 const unsigned long TEST_DURATION_MS = 10000;

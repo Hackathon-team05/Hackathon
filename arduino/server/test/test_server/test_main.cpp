@@ -49,6 +49,10 @@ void generate_checksum(ControlCommand& cmd);
 void verification_status(int dev, ControlCommand& cmd, InstrumentStatus& status);
 void handle_device_command(int dev, ControlCommand& cmd);
 
+void LED_setup();
+void light_up(int dev);
+void failsafe_light(int dev);
+
 // 製品側のsetup/loopと、Unityテスト側のsetup/loopの名前衝突を防ぐ。
 #define setup server_application_setup
 #define loop server_application_loop
@@ -65,6 +69,7 @@ void handle_device_command(int dev, ControlCommand& cmd);
 #include "../../entry_que.ino"
 #include "../../mic_input.ino"
 #include "../../control_command.ino"
+#include "../../LED.ino"
 
 // テストへ与える入力を表示する。
 void log_input(const char* message) {
