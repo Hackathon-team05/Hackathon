@@ -31,7 +31,7 @@ const int BAUD=115200;
 const int CMD_CONNECT=100;//I2Cハンドシェイクで楽器へ送る接続確認コマンド
 const int ACK_OK=200;//楽器がハンドシェイクに返す正常応答
 const int CMD_RESET=0x05;//【今回追加】起動時にlocal_tick等を初期化させるコマンド(i2c_slave.inoのCMD_RESETと値を一致させる)
-const int max_try=3;
+const int max_try=10;
 //ピン設定
 const int CS_DEV1=D4;
 const int CS_DEV2=D5;
@@ -55,7 +55,7 @@ const uint32_t ENTRY_TICK[4] = {0, 128, 256, 0};        //各idが入る global_
 const uint8_t  ENTRY_CMD[4]  = {0x03, 0x03, 0x03, 0x01};//0x03=ENTRY_CUE(メロディ) / 0x01=PLAY(ドラム)
 //拍手検出
 uint16_t value=0;
-const int PEAK_SIGMA_FACTOR=2;
+const int PEAK_SIGMA_FACTOR=5;
 const uint8_t WINDOW_SIZE=50;
 uint16_t mic_window[WINDOW_SIZE];
 uint8_t win_id=0;
@@ -117,6 +117,7 @@ void setup(){
     for(int i=0;i<4;i++){
         if(i2c_wait_ack(i)==false){
             dev_ctl[i].failsafe=true;
+            Serial.println("FAILSAFE: Handshake Failed");
             failsafe_light(i);
         }else{
             light_up(i);
@@ -186,6 +187,8 @@ void loop(){
     unsigned long server_now_ms=millis();
     if(server_now_ms-last_status_poll_ms>=STATUS_POLL_INTERVAL_MS){
         last_status_poll_ms+=STATUS_POLL_INTERVAL_MS;
+        // 【一時無効化】status_pollによる通信エラー起因の勝手なフェイルセーフを防止
+        /*
         for(int i = 0; i < 4; i++){
             if(dev_ctl[i].failsafe){
                 continue;
@@ -193,6 +196,7 @@ void loop(){
             i2c_receive_without_sequence_check(i,status);//通信監視
             handle_device_command(i, cmd);//error_count>=3ならフェイルセーフ発動
         }
+        */
     }
 
     //拍手によるBPM変更（テンポは従来通り観客がマイクで操作可能）
