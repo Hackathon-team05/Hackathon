@@ -85,7 +85,6 @@ struct __attribute__((packed)) ControlCommand {
     uint8_t  command_type;
     uint16_t payload;
     uint8_t  sequence;
-    uint8_t  checksum;
 };
 
 // server.ino の InstrumentStatus と完全一致させる (5バイト, packed) ※変更なし
@@ -94,7 +93,6 @@ struct __attribute__((packed)) InstrumentStatus {
     uint8_t frog_state;
     uint8_t sequence_ack;
     uint8_t ack_ok;
-    uint8_t checksum;
 };
 
 extern volatile bool is_playing;
@@ -215,10 +213,7 @@ void build_status_packet(uint8_t* out) {
     out[1] = frog_state;             // loop()のpressure_read()で常に最新化されている値
     out[2] = last_acked_sequence;    // 直前に正常受信したsequence(コマンド応答時は今回分)
     out[3] = last_ack_ok;            // 直前に受信したコマンドの検証結果(コマンド応答時は今回分)
-
-    uint8_t sum = 0;
-    for (uint8_t i = 0; i < sizeof(InstrumentStatus) - 1; i++) sum += out[i];
-    out[4] = (uint8_t)(0 - sum);
+    // 【チェックサム廃止】checksumバイトは無し（InstrumentStatusは4バイト構成）。
 }
 
 // ----------------------------------------------------------------------------
