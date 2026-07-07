@@ -86,11 +86,17 @@ void loop() {
             Serial.print(F("[PART END] instrument_id="));
             Serial.print(get_instrument_id());
             Serial.println(F(" reached loop count. stopped."));
-        } else {
+        } else if (frog_state) {
+            // 【今回追加】カエル人形が乗っている(frog_state=1)ときだけ発音する。
             int8_t pitch_offset = pressure_get_pitch_offset(); //追加
             // score_step()にはscore_data.hの譜面基準(0〜LOOP_MAX_TICK-1)のtick位置を渡す。
             // local_tick自体はもう毎ループ0に巻き戻らないため、ここで割った余りを渡す。
             score_step((uint16_t)(current_tick % LOOP_MAX_TICK), pitch_offset); //変更
+        } else {
+            // 【今回追加】人形が乗っていない(frog_state=0)ときは発音しない。
+            // 鳴っている音は止める。local_tickはSYNCで進み続けるので(is_playingは維持)、
+            // 再び人形を乗せれば輪唱の正しい位置から鳴り復帰する。
+            score_stop_all();
         }
     }
 }

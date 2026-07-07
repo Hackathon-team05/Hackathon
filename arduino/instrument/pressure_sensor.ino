@@ -3,15 +3,15 @@
 const int PRESSURE_SENSOR_PIN = A0;
 
 //乗ってるか乗ってないかの判定
-const int ONSET_THRESHOLD = 200;  //閾値の暫定値
+const int ONSET_THRESHOLD = 100;  //閾値（sketch_jul5a準拠）
 
 // 重さによるピッチ変化の閾値
 // 軽い : raw < LIGHT_THRESHOLD  → pitch +12（高い音）
 // 普通 : LIGHT_THRESHOLD <= raw < HEAVY_THRESHOLD → pitch ±0
 // 重い : raw >= HEAVY_THRESHOLD → pitch -12（低い音）
-const int LIGHT_THRESHOLD = 400;   // 要調整
+const int LIGHT_THRESHOLD = 200;   // sketch_jul5a準拠
 
-const int HEAVY_THRESHOLD = 700;   // 要調整
+const int HEAVY_THRESHOLD = 280;   // sketch_jul5a準拠
 
 void pressure_init() {
   pinMode(PRESSURE_SENSOR_PIN, INPUT);
