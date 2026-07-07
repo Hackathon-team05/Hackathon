@@ -53,7 +53,7 @@ const uint32_t ENTRY_TICK[4] = {0, 128, 256, 0};        //各idが入る global_
 const uint8_t  ENTRY_CMD[4]  = {0x03, 0x03, 0x03, 0x01};//0x03=ENTRY_CUE(メロディ) / 0x01=PLAY(ドラム)
 //拍手検出
 uint16_t value=0;
-const int PEAK_SIGMA_FACTOR=2;
+const int PEAK_SIGMA_FACTOR=5;
 const uint8_t WINDOW_SIZE=50;
 uint16_t mic_window[WINDOW_SIZE];
 uint8_t win_id=0;
