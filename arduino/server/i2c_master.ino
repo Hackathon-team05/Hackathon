@@ -126,16 +126,8 @@ void i2c_receive_without_sequence_check(int dev, InstrumentStatus& status) {
         return;
     }
 
-    uint8_t* status_box=(uint8_t*)&status;
-    uint8_t sum=0;
-
-    // InstrumentStatus全体のchecksumを確認する。
-    for(int i=0;i<sizeof(InstrumentStatus);i++){
-        sum+=status_box[i];
-    }
-
-    // 読み取り専用監視では、パケット整合性と楽器IDだけを見る。
-    if(sum!=0 || status.instrument_id>=4 || status.instrument_id!=(uint8_t)dev){
+    // 【チェックサム廃止】checksum判定は行わず、楽器IDのみ確認する。
+    if(status.instrument_id>=4 || status.instrument_id!=(uint8_t)dev){
         dev_ctl[dev].error_count++;
         return;
     }
