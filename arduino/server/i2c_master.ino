@@ -1,7 +1,7 @@
 void i2c_setup(){
     Wire.begin();
     Wire.setClock(I2C_CONFIG_HZ);
-    Wire.setWireTimeout(50000, true);
+    Wire.setTimeout(50000);
     pinMode(CS_SYNC,OUTPUT);
     digitalWrite(CS_SYNC,LOW);
 }
@@ -11,7 +11,7 @@ void i2c_reset_master(){
     delay(10);
     Wire.begin();
     Wire.setClock(I2C_CONFIG_HZ);
-    Wire.setWireTimeout(50000, true);
+    Wire.setTimeout(50000);
 }
 
 bool i2c_wait_ack(int dev){
