@@ -129,20 +129,18 @@ void setup(){
     //そこでハンドシェイクに成功した楽器全てへCMD_RESETを送り、
     //local_tick=0 / is_playing=false / 鳴っている音の停止 を明示的に行わせてから
     //通常のENTRY_TICKスケジュール(loop側)を開始する。
-    {
-        ControlCommand cmd;
-        InstrumentStatus status;
-        for(int i=0;i<4;i++){
-            if(dev_ctl[i].failsafe){
-                continue;//ハンドシェイク自体に失敗した楽器には送らない
-            }
-            generate_cmd(CMD_RESET,cmd);
-            i2c_send(i,cmd);
-            i2c_receive_with_sequence_check(i,cmd,status);
-            //ここでの検証失敗はフェイルセーフにしない。
-            //通信自体は確立しているため、以後のSTATUS_POLLでエラーが続けば
-            //既存のhandle_device_command()が通常通りフェイルセーフを発動する。
+    ControlCommand cmd;
+    InstrumentStatus status;
+    for(int i=0;i<4;i++){
+        if(dev_ctl[i].failsafe){
+            continue;//ハンドシェイク自体に失敗した楽器には送らない
         }
+        generate_cmd(CMD_RESET,cmd);
+        i2c_send(i,cmd);
+        i2c_receive_with_sequence_check(i,cmd,status);
+        //ここでの検証失敗はフェイルセーフにしない。
+        //通信自体は確立しているため、以後のSTATUS_POLLでエラーが続けば
+        //既存のhandle_device_command()が通常通りフェイルセーフを発動する。
     }
 
     mic_setup();
@@ -177,19 +175,6 @@ void loop(){
             if(dev_ctl[i].error_count==0){
                 dev_ctl[i].is_playing=true;
             }
-        }
-    }
-
-    //定期的な状態監視とフェイルセーフ（frog_stateは監視のみ、入り判定には使わない）
-    unsigned long server_now_ms=millis();
-    if(server_now_ms-last_status_poll_ms>=STATUS_POLL_INTERVAL_MS){
-        last_status_poll_ms+=STATUS_POLL_INTERVAL_MS;
-        for(int i = 0; i < 4; i++){
-            if(dev_ctl[i].failsafe){
-                continue;
-            }
-            i2c_receive_without_sequence_check(i,status);//通信監視
-            handle_device_command(i, cmd);//error_count>=3ならフェイルセーフ発動
         }
     }
 
