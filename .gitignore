@@ -24,3 +24,9 @@ processing/*/*.class
 
 # ローカルにのみ置く，基本設計などのディレクトリ
 local/
+
+# テスト結果（ログ・グラフ・CSV）
+arduino/server/test/results/*/
+
+# PlatformIO ビルドキャッシュ
+arduino/server/.pio/
