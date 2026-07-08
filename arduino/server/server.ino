@@ -16,7 +16,6 @@ struct __attribute__((packed)) ControlCommand{
     uint8_t command_type;
     uint16_t payload;
     uint8_t sequence;
-    uint8_t checksum;
 };
 
 struct __attribute__((packed)) InstrumentStatus{
@@ -24,7 +23,6 @@ struct __attribute__((packed)) InstrumentStatus{
     uint8_t frog_state;
     uint8_t sequence_ack;
     uint8_t ack_ok;
-    uint8_t checksum;
 };
 //初期セットアップ
 const int BAUD=115200;
@@ -55,7 +53,7 @@ const uint32_t ENTRY_TICK[4] = {0, 128, 256, 0};        //各idが入る global_
 const uint8_t  ENTRY_CMD[4]  = {0x03, 0x03, 0x03, 0x01};//0x03=ENTRY_CUE(メロディ) / 0x01=PLAY(ドラム)
 //拍手検出
 uint16_t value=0;
-const int PEAK_SIGMA_FACTOR=5;
+const int PEAK_SIGMA_FACTOR=3;
 const uint8_t WINDOW_SIZE=50;
 uint16_t mic_window[WINDOW_SIZE];
 uint8_t win_id=0;
@@ -131,20 +129,18 @@ void setup(){
     //そこでハンドシェイクに成功した楽器全てへCMD_RESETを送り、
     //local_tick=0 / is_playing=false / 鳴っている音の停止 を明示的に行わせてから
     //通常のENTRY_TICKスケジュール(loop側)を開始する。
-    {
-        ControlCommand cmd;
-        InstrumentStatus status;
-        for(int i=0;i<4;i++){
-            if(dev_ctl[i].failsafe){
-                continue;//ハンドシェイク自体に失敗した楽器には送らない
-            }
-            generate_cmd(CMD_RESET,cmd);
-            i2c_send(i,cmd);
-            i2c_receive_with_sequence_check(i,cmd,status);
-            //ここでの検証失敗はフェイルセーフにしない。
-            //通信自体は確立しているため、以後のSTATUS_POLLでエラーが続けば
-            //既存のhandle_device_command()が通常通りフェイルセーフを発動する。
+    ControlCommand cmd;
+    InstrumentStatus status;
+    for(int i=0;i<4;i++){
+        if(dev_ctl[i].failsafe){
+            continue;//ハンドシェイク自体に失敗した楽器には送らない
         }
+        generate_cmd(CMD_RESET,cmd);
+        i2c_send(i,cmd);
+        i2c_receive_with_sequence_check(i,cmd,status);
+        //ここでの検証失敗はフェイルセーフにしない。
+        //通信自体は確立しているため、以後のSTATUS_POLLでエラーが続けば
+        //既存のhandle_device_command()が通常通りフェイルセーフを発動する。
     }
 
     mic_setup();
@@ -179,19 +175,6 @@ void loop(){
             if(dev_ctl[i].error_count==0){
                 dev_ctl[i].is_playing=true;
             }
-        }
-    }
-
-    //定期的な状態監視とフェイルセーフ（frog_stateは監視のみ、入り判定には使わない）
-    unsigned long server_now_ms=millis();
-    if(server_now_ms-last_status_poll_ms>=STATUS_POLL_INTERVAL_MS){
-        last_status_poll_ms+=STATUS_POLL_INTERVAL_MS;
-        for(int i = 0; i < 4; i++){
-            if(dev_ctl[i].failsafe){
-                continue;
-            }
-            i2c_receive_without_sequence_check(i,status);//通信監視
-            handle_device_command(i, cmd);//error_count>=3ならフェイルセーフ発動
         }
     }
 
