@@ -100,6 +100,10 @@ def main():
             process.terminate()
             process.wait()
 
+    # グラフ生成スクリプトを自動で呼び出す
+    plot_script = Path(__file__).resolve().with_name("plot_mic_results.py")
+    subprocess.run([sys.executable, str(plot_script), str(log_path)], cwd=project_root)
+
     # 精度解析スクリプトを自動で呼び出す
     accuracy_script = Path(__file__).resolve().with_name("analyze_accuracy.py")
     subprocess.run(
