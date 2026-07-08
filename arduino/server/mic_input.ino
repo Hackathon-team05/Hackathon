@@ -1,14 +1,3 @@
-// 【追加】Pythonスクリプト（plot_mic_results.py）連携用のログ出力
-void log_mic_data_for_python(unsigned long t, uint16_t adc, bool p_track, bool updated) {
-    Serial.print("MIC_DATA,");
-    Serial.print(t); Serial.print(",");
-    Serial.print(adc); Serial.print(",");
-    Serial.print(p_track ? 1 : 0); Serial.print(",");
-    Serial.print(updated ? 1 : 0); Serial.print(",");
-    Serial.print(bpm); Serial.print(",");
-    Serial.println(clap_count);
-}
-
 void mic_setup(){
     pinMode(MIC_PIN,INPUT);
     last_mic_sample_ms=millis();
@@ -29,7 +18,6 @@ bool mic_read(){
         if (win_id == 0) {
             win_full = true;
         }
-        log_mic_data_for_python(start_t, value, peak_track, judge);
         return judge;
     }
     float sum=0;
@@ -51,7 +39,6 @@ bool mic_read(){
         peak_max=value;
         peak_time=start_t;
         down_count=0;
-        log_mic_data_for_python(start_t, value, peak_track, judge);
         return judge;
     }else if(peak_track){
         if(value>peak_max){
@@ -71,7 +58,6 @@ bool mic_read(){
             peak_max=0;
             down_count=0;
         }
-        log_mic_data_for_python(start_t, value, peak_track, judge);
         return judge;//returnすることで閾値以上の値を閾値設定バッファに入れない
     }
     mic_window[win_id] = value;
@@ -79,6 +65,5 @@ bool mic_read(){
     if (win_id == 0) {
         win_full = true;
     }
-    log_mic_data_for_python(start_t, value, peak_track, judge);
     return judge;
 }
