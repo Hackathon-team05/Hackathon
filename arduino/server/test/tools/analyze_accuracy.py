@@ -37,7 +37,7 @@ def read_mic_data(log_path):
             if pos < 0:
                 continue
             values = line[pos + len(DATA_PREFIX):].strip().split(",")
-            if len(values) != 6:
+            if len(values) != 7:
                 print(f"警告: {line_number}行目を読み飛ばしました。", file=sys.stderr)
                 continue
             try:
@@ -48,6 +48,7 @@ def read_mic_data(log_path):
                     "bpm_updated": int(values[3]),
                     "bpm":         float(values[4]),
                     "clap_count":  int(values[5]),
+                    "detected_clap_total": int(values[6]),
                 })
             except ValueError:
                 print(f"警告: {line_number}行目に数値以外が含まれます。", file=sys.stderr)

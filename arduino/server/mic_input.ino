@@ -1,3 +1,5 @@
+uint32_t detected_clap_total = 0;
+
 // 【追加】Pythonスクリプト（plot_mic_results.py）連携用のログ出力
 void log_mic_data_for_python(unsigned long t, uint16_t adc, bool p_track, bool updated) {
     Serial.print("MIC_DATA,");
@@ -6,7 +8,8 @@ void log_mic_data_for_python(unsigned long t, uint16_t adc, bool p_track, bool u
     Serial.print(p_track ? 1 : 0); Serial.print(",");
     Serial.print(updated ? 1 : 0); Serial.print(",");
     Serial.print(bpm); Serial.print(",");
-    Serial.println(clap_count);
+    Serial.print(clap_count); Serial.print(",");
+    Serial.println(detected_clap_total);
 }
 
 void mic_setup(){
@@ -63,6 +66,7 @@ bool mic_read(){
         }
         if(down_count>=PEAK_DOWN_COUNT){
             if(last_time==0||peak_time-last_time>=INTERVAL_TIME){//インターバルチェック
+                detected_clap_total++;
                 judge = bpm_generate(peak_time);
                 last_time=peak_time;
             }

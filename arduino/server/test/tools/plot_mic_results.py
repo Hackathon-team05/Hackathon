@@ -16,6 +16,7 @@ CSV_HEADER = [
     "bpm_updated",
     "bpm",
     "clap_count",
+    "detected_clap_total",
 ]
 
 
@@ -42,7 +43,7 @@ def read_mic_data(log_path):
                 continue
 
             values = line[prefix_position + len(DATA_PREFIX) :].strip().split(",")
-            if len(values) != 6:
+            if len(values) != 7:
                 print(
                     "警告: " + str(line_number) + "行目のMIC_DATAを読み飛ばしました。",
                     file=sys.stderr,
@@ -58,6 +59,7 @@ def read_mic_data(log_path):
                         "bpm_updated": int(values[3]),
                         "bpm": float(values[4]),
                         "clap_count": int(values[5]),
+                        "detected_clap_total": int(values[6]),
                     }
                 )
             except ValueError:

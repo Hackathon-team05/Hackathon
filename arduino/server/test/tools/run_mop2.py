@@ -116,21 +116,21 @@ def main():
     )
 
     # 成功率を簡易計算して追記
-    max_clap_count = 0
+    detected_clap_total = 0
     with log_path.open("r", encoding="utf-8", errors="replace") as f:
         for line in f:
             if "MIC_DATA," in line:
                 try:
                     parts = line.strip().split(",")
-                    max_clap_count = int(parts[-1])
+                    detected_clap_total = int(parts[6])
                 except Exception:
                     pass
     
-    success_rate = (max_clap_count / 100.0) * 100
+    success_rate = (detected_clap_total / 100.0) * 100
 
     print("\n" + "="*60)
     print(f"MOP2 評価用 簡易結果")
-    print(f"検出された拍手回数: {max_clap_count} 回 / 100 回中")
+    print(f"検出された拍手回数: {detected_clap_total} 回 / 100 回中")
     print(f"成功率: {success_rate:.1f} %")
     print("="*60 + "\n")
 
@@ -140,7 +140,7 @@ def main():
         f.write("MOP2 評価用 簡易結果\n")
         f.write("="*60 + "\n")
         f.write(f"想定拍手回数: 100 回\n")
-        f.write(f"検出された拍手回数: {max_clap_count} 回\n")
+        f.write(f"検出された拍手回数: {detected_clap_total} 回\n")
         f.write(f"成功率: {success_rate:.1f} %\n")
         f.write("\n\n" + "="*60 + "\n")
         f.write("詳細な解析結果 (analyze_accuracy.py)\n")
