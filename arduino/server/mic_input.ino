@@ -15,6 +15,7 @@ void log_mic_data_for_python(unsigned long t, uint16_t adc, bool p_track, bool u
 void mic_setup(){
     pinMode(MIC_PIN,INPUT);
     last_mic_sample_ms=millis();
+    detected_clap_total=0;
 }
 
 bool mic_read(){

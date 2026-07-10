@@ -56,13 +56,13 @@ def read_mic_data(log_path):
 
 
 def find_clap_events(rows):
-    """clap_count が増加した瞬間の時刻リスト（ms）を返す。"""
+    """detected_clap_total が増加した瞬間の時刻リスト（ms）を返す。"""
     events = []
-    prev = rows[0]["clap_count"]
+    prev = rows[0]["detected_clap_total"]
     for row in rows[1:]:
-        if row["clap_count"] > prev:
+        if row["detected_clap_total"] > prev:
             events.append(row["time_ms"])
-        prev = row["clap_count"]
+        prev = row["detected_clap_total"]
     return events
 
 
@@ -85,34 +85,44 @@ def calc_stats(values):
     return {"mean": mean, "std": std, "min": min(values), "max": max(values), "n": n}
 
 
-def print_report(ref_bpm, system_bpm_list, interval_bpm_list):
+def print_report(ref_bpm, system_bpm_list, interval_bpm_list, detected_total, total_claps=100):
     """精度レポートを表示する。"""
     sep = "=" * 60
 
     print(f"\n{sep}")
-    print(f"  BPM読み取り精度レポート  (基準BPM: {ref_bpm:.1f})")
+    print(f"  MOP2 拍手検出レポート  (基準BPM: {ref_bpm:.1f})")
     print(sep)
+
+    # --- 拍手検出成功率（detected_clap_total 基準）---
+    success_rate = (detected_total / total_claps) * 100
+    judge_mop2_1 = "PASS" if detected_total >= 90 else "FAIL"
+    judge_mop2_2 = "PASS" if detected_total >= 75 else "FAIL"
+    print(f"\n[拍手検出成功率]")
+    print(f"  検出数 (detected_clap_total): {detected_total} 回 / {total_claps} 回中")
+    print(f"  成功率                      : {success_rate:.1f} %")
+    print(f"  MOP2-1 合否（低ノイズ: 90回以上）: {judge_mop2_1}")
+    print(f"  MOP2-2 合否（高ノイズ: 75回以上）: {judge_mop2_2}")
 
     # --- システムが出力したBPM（bpm_updated=1 の行の bpm 値）---
     if system_bpm_list:
         s = calc_stats(system_bpm_list)
         errors = [abs(v - ref_bpm) for v in system_bpm_list]
         rel_errors = [e / ref_bpm * 100 for e in errors]
-        print(f"\n【システム出力BPM（拍手検知後に更新した値）】  n={s['n']}")
+        print(f"\n[システム出力BPM（拍手検知後に更新した値）]  n={s['n']}")
         print(f"  平均値    : {s['mean']:.2f} BPM  (誤差: {s['mean']-ref_bpm:+.2f})")
         print(f"  標準偏差  : {s['std']:.2f} BPM")
         print(f"  最小 / 最大: {s['min']:.1f} / {s['max']:.1f} BPM")
         print(f"  平均絶対誤差(MAE): {sum(errors)/len(errors):.2f} BPM")
         print(f"  平均相対誤差     : {sum(rel_errors)/len(rel_errors):.2f} %")
     else:
-        print("\n【システム出力BPM】 データなし（拍手が検知されませんでした）")
+        print("\n[システム出力BPM] データなし（拍手が検知されませんでした）")
 
     # --- 拍手イベントの間隔から算出した実測BPM ---
     if interval_bpm_list:
         s = calc_stats(interval_bpm_list)
         errors = [abs(v - ref_bpm) for v in interval_bpm_list]
         rel_errors = [e / ref_bpm * 100 for e in errors]
-        print(f"\n【拍手間隔から算出した実測BPM】  n={s['n']}")
+        print(f"\n[拍手間隔から算出した実測BPM]  n={s['n']}")
         print(f"  平均値    : {s['mean']:.2f} BPM  (誤差: {s['mean']-ref_bpm:+.2f})")
         print(f"  標準偏差  : {s['std']:.2f} BPM")
         print(f"  最小 / 最大: {s['min']:.1f} / {s['max']:.1f} BPM")
@@ -120,7 +130,7 @@ def print_report(ref_bpm, system_bpm_list, interval_bpm_list):
         print(f"  平均相対誤差     : {sum(rel_errors)/len(rel_errors):.2f} %")
         print(f"\n  各拍手間のBPM: {[f'{v:.1f}' for v in interval_bpm_list]}")
     else:
-        print("\n【拍手間隔BPM】 データなし（拍手が2回以上検知されませんでした）")
+        print("\n[拍手間隔BPM] データなし（拍手が2回以上検知されませんでした）")
 
     print(f"\n{sep}\n")
 
@@ -137,6 +147,9 @@ def main():
         print("エラー: MIC_DATA行がありません。", file=sys.stderr)
         return 1
 
+    # detected_clap_total の最終値（累積検出回数）
+    detected_total = rows[-1]["detected_clap_total"]
+
     # システムが更新したBPMリスト
     system_bpm_list = [r["bpm"] for r in rows if r["bpm_updated"] != 0]
 
@@ -144,7 +157,7 @@ def main():
     clap_events = find_clap_events(rows)
     interval_bpm_list = calc_interval_bpm(clap_events)
 
-    print_report(args.ref_bpm, system_bpm_list, interval_bpm_list)
+    print_report(args.ref_bpm, system_bpm_list, interval_bpm_list, detected_total)
     return 0
 
 

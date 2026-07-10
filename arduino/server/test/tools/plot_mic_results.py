@@ -162,7 +162,7 @@ def save_clap_graph(plt, rows, output_path):
     """ピーク追跡状態と累積拍手回数を描画する。"""
     time_seconds = [row["time_ms"] / 1000.0 for row in rows]
     peak_values = [row["peak_track"] for row in rows]
-    clap_values = [row["clap_count"] for row in rows]
+    clap_values = [row["detected_clap_total"] for row in rows]
 
     figure, first_axis = plt.subplots(figsize=(12, 5))
     first_axis.step(
@@ -196,14 +196,14 @@ def save_clap_graph(plt, rows, output_path):
 
 
 def find_clap_times(rows):
-    """累積拍手回数が増加した時刻を秒単位で返す。"""
+    """detected_clap_total が増加した時刻を秒単位で返す。"""
     clap_times = []
-    previous_count = rows[0]["clap_count"]
+    previous_count = rows[0]["detected_clap_total"]
 
     for row in rows[1:]:
-        if row["clap_count"] > previous_count:
+        if row["detected_clap_total"] > previous_count:
             clap_times.append(row["time_ms"] / 1000.0)
-        previous_count = row["clap_count"]
+        previous_count = row["detected_clap_total"]
 
     return clap_times
 
@@ -213,7 +213,7 @@ def save_comparison_graph(plt, rows, output_path):
     time_seconds = [row["time_ms"] / 1000.0 for row in rows]
     adc_values = [row["adc"] for row in rows]
     peak_values = [row["peak_track"] for row in rows]
-    clap_values = [row["clap_count"] for row in rows]
+    clap_values = [row["detected_clap_total"] for row in rows]
     clap_times = find_clap_times(rows)
     update_times = [
         row["time_ms"] / 1000.0 for row in rows if row["bpm_updated"] != 0

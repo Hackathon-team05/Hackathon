@@ -25,7 +25,7 @@ def upload_to_arduino(pio, project_root):
         print("❌ 書き込みに失敗しました。Arduinoが接続されているか確認してください。")
         return False
     print("✅ 書き込み完了。Arduinoが起動しています...")
-    time.sleep(2)  # 起動完了を待つ
+    time.sleep(5)  # 起動完了を待つ（I2Cハンドシェイク+CMD_RESETを考慮して5秒）
     return True
 
 def find_platformio():
@@ -116,22 +116,36 @@ def main():
     )
 
     # 成功率を簡易計算して追記
+    # ※ line.split(",") だと parts[0]="MIC_DATA" が含まれてインデックスがズレるため、
+    #   read_mic_data() と同様にプレフィックス除去後に分割する。
+    DATA_PREFIX = "MIC_DATA,"
     detected_clap_total = 0
     with log_path.open("r", encoding="utf-8", errors="replace") as f:
         for line in f:
-            if "MIC_DATA," in line:
-                try:
-                    parts = line.strip().split(",")
-                    detected_clap_total = int(parts[6])
-                except Exception:
-                    pass
-    
+            pos = line.find(DATA_PREFIX)
+            if pos < 0:
+                continue
+            try:
+                values = line[pos + len(DATA_PREFIX):].strip().split(",")
+                if len(values) >= 7:  # time,adc,peak_track,bpm_updated,bpm,clap_count,detected_clap_total
+                    detected_clap_total = int(values[6])  # 7番目 = detected_clap_total
+            except Exception:
+                pass
+
     success_rate = (detected_clap_total / 100.0) * 100
+
+    # 計画書の合否基準: MOP2-1 >= 90%, MOP2-2 >= 75%
+    pass_mop2_1 = detected_clap_total >= 90
+    pass_mop2_2 = detected_clap_total >= 75
+    judge_mop2_1 = "PASS" if pass_mop2_1 else "FAIL"
+    judge_mop2_2 = "PASS" if pass_mop2_2 else "FAIL"
 
     print("\n" + "="*60)
     print(f"MOP2 評価用 簡易結果")
     print(f"検出された拍手回数: {detected_clap_total} 回 / 100 回中")
     print(f"成功率: {success_rate:.1f} %")
+    print(f"MOP2-1（低ノイズ条件: 90回以上）: {judge_mop2_1}")
+    print(f"MOP2-2（高ノイズ条件: 75回以上）: {judge_mop2_2}")
     print("="*60 + "\n")
 
     # 解析結果をテキストファイルに追記する
@@ -142,6 +156,8 @@ def main():
         f.write(f"想定拍手回数: 100 回\n")
         f.write(f"検出された拍手回数: {detected_clap_total} 回\n")
         f.write(f"成功率: {success_rate:.1f} %\n")
+        f.write(f"MOP2-1 合否（低ノイズ条件: 90回以上）: {judge_mop2_1}\n")
+        f.write(f"MOP2-2 合否（高ノイズ条件: 75回以上）: {judge_mop2_2}\n")
         f.write("\n\n" + "="*60 + "\n")
         f.write("詳細な解析結果 (analyze_accuracy.py)\n")
         f.write("="*60 + "\n")
